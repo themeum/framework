@@ -95,14 +95,14 @@ abstract class Model implements Arrayable, Jsonable, ArrayAccess, JsonSerializab
      *
      * @var bool
      */
-    protected bool $exists = false;
+    protected $exists = false;
 
     /**
      * Indicates if the model was recently created.
      *
      * @var bool
      */
-    protected bool $was_recently_created = false;
+    protected $was_recently_created = false;
 
     /**
      * The name of the "created at" column.
@@ -977,7 +977,7 @@ abstract class Model implements Arrayable, Jsonable, ArrayAccess, JsonSerializab
      * @since 1.0.0
      */
     #[\ReturnTypeWillChange]
-    public function offsetSet($offset, $value): void
+    public function offsetSet($offset, $value)
     {
         $this->set_attribute($offset, $value);
     }
@@ -1001,7 +1001,7 @@ abstract class Model implements Arrayable, Jsonable, ArrayAccess, JsonSerializab
      * @return void No return value
      * @since 1.0.0
      */
-    public function offsetUnset($offset): void
+    public function offsetUnset($offset)
     {
         unset(
             $this->attributes[$offset],

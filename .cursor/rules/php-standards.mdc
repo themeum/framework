@@ -6,7 +6,9 @@ alwaysApply: true
 
 # PHP Coding Standards
 
-Target PHP **7.4** (see `composer.json` `config.platform.php`). Follow PSR-4 file naming and PSR-12 via PHPCS.
+Target PHP **7.0** (see `composer.json` `config.platform.php`). Follow PSR-4 file naming and PSR-12 via PHPCS.
+
+Do not use syntax introduced after PHP 7.0: no nullable types (`?Type`), `: void` return types, class constant visibility (`public const`), typed properties, `??=`, array spread in literals (`[...$a]`), short list destructuring (`[$a, $b] = ...`), trailing commas in function calls, or arrow functions.
 
 ## Classes and Files
 

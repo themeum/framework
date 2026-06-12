@@ -6,7 +6,7 @@ use BadMethodCallException;
 
 trait Macroable
 {
-    protected static array $macros = [];
+    protected static $macros = [];
 
     /**
      * Register a macro.

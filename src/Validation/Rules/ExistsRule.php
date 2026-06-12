@@ -23,7 +23,7 @@ class ExistsRule extends BaseRule
             throw new Exception("Missing parameters for exists rule.");
         }
 
-        [$table_name, $column_name] = explode(",", $this->rule_value, 2);
+        list($table_name, $column_name) = explode(",", $this->rule_value, 2);
 
         $result = DB::table($table_name)->where($column_name, $this->value)->first();
 

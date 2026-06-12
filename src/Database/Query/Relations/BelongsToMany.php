@@ -227,10 +227,10 @@ class BelongsToMany extends Relation
         $related_table = $this->related->get_table();
         $related_columns = $this->related_columns();
 
-        $query->select([
-            ...$related_columns,
-            ...$this->qualify_pivot_columns()
-        ]);
+        $query->select(array_merge(
+            $related_columns,
+            $this->qualify_pivot_columns()
+        ));
 
         $query->join(
             $this->pivot_table,
@@ -287,11 +287,10 @@ class BelongsToMany extends Relation
      */
     protected function qualify_pivot_columns()
     {
-        return collection(array_filter([
+        return collection(array_filter(array_merge([
             $this->foreign_pivot_key,
-            $this->related_pivot_key,
-            ...$this->pivot_columns
-        ], function ($column) {
+            $this->related_pivot_key
+        ], $this->pivot_columns), function ($column) {
             return $column !== null;
         }))
             ->map(function ($column) {
@@ -399,7 +398,7 @@ class BelongsToMany extends Relation
                 continue;
             }
 
-            $dictionary[$attribute] ??= [];
+            $dictionary[$attribute] = $dictionary[$attribute] ?? [];
             $dictionary[$attribute][] = $this->migrate_pivot_attributes($result);
         }
 
@@ -820,7 +819,7 @@ class BelongsToMany extends Relation
 
             foreach ($ids as $id => $attributes) {
                 if (!is_array($attributes)) {
-                    [$id, $attributes] = [$attributes, []];
+                    list($id, $attributes) = [$attributes, []];
                 }
 
                 $records[$id] = $attributes;

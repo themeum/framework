@@ -108,7 +108,7 @@ trait RelationshipQueries
      * @return QueryBuilder The query builder instance for method chaining
      * @since 1.0.0
      */
-    public function where_has($relation, ?Closure $callback = null, $operator = '>=', $count = 1)
+    public function where_has($relation, $callback = null, $operator = '>=', $count = 1)
     {
         return $this->has($relation, $operator, $count, 'and', $callback);
     }
@@ -124,7 +124,7 @@ trait RelationshipQueries
      * @return QueryBuilder The query builder instance for method chaining
      * @since 1.0.0
      */
-    public function with_where_has($relation, ?Closure $callback = null, $operator = '>=', $count = 1)
+    public function with_where_has($relation, $callback = null, $operator = '>=', $count = 1)
     {
         return $this->where_has($relation, $callback, $operator, $count)
             ->with($callback ? [$relation => function ($query) use ($callback) {
@@ -143,7 +143,7 @@ trait RelationshipQueries
      * @return QueryBuilder The query builder instance for method chaining
      * @since 1.0.0
      */
-    public function or_where_has($relation, ?Closure $callback = null, $operator = '>=', $count = 1)
+    public function or_where_has($relation, $callback = null, $operator = '>=', $count = 1)
     {
         return $this->has($relation, $operator, $count, 'or', $callback);
     }
@@ -158,7 +158,7 @@ trait RelationshipQueries
      * @return QueryBuilder The query builder instance for method chaining
      * @since 1.0.0
      */
-    public function not_has($relation, $boolean = 'and', ?Closure $callback = null)
+    public function not_has($relation, $boolean = 'and', $callback = null)
     {
         return $this->has($relation, '<', 1, $boolean, $callback);
     }
@@ -185,7 +185,7 @@ trait RelationshipQueries
      * @return QueryBuilder The query builder instance for method chaining
      * @since 1.0.0
      */
-    public function where_not_has($relation, ?Closure $callback = null)
+    public function where_not_has($relation, $callback = null)
     {
         return $this->not_has($relation, 'and', $callback);
     }
@@ -199,7 +199,7 @@ trait RelationshipQueries
      * @return QueryBuilder The query builder instance for method chaining
      * @since 1.0.0
      */
-    public function or_where_not_has($relation, ?Closure $callback = null)
+    public function or_where_not_has($relation, $callback = null)
     {
         return $this->not_has($relation, 'or', $callback);
     }
@@ -385,7 +385,7 @@ trait RelationshipQueries
             if ($function === 'exists') {
                 $this->select_raw(
                     sprintf('exists(%s) as %s', $query->to_sql(), $this->get_compiler()->wrap($alias)),
-                    $query->get_bindings(),
+                    $query->get_bindings()
                 )->with_casts([$alias => 'boolean']);
             } else {
                 if ($function === 'count') {
@@ -426,7 +426,7 @@ trait RelationshipQueries
      * @return QueryBuilder The query builder instance for method chaining
      * @since 1.0.0
      */
-    public function has($relation, $operator = '>=', $count = 1, $boolean = 'and', ?Closure $callback = null)
+    public function has($relation, $operator = '>=', $count = 1, $boolean = 'and', $callback = null)
     {
         if (is_string($relation)) {
             $relation = $this->get_relation_without_constraints($relation);
@@ -513,7 +513,7 @@ trait RelationshipQueries
             ? $this->re_qualify_where_tables(
                 $from->wheres,
                 $from->get_compiler()->get_value($from->from),
-                $this->get_model()->get_table(),
+                $this->get_model()->get_table()
             ) : $from->wheres;
 
         return $this->merge_wheres($wheres, $where_bindings);

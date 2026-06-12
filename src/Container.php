@@ -68,7 +68,7 @@ class Container implements ContainerContract
      * @param string|null $base_path
      * @return void
      */
-    public function __construct(?string $base_path = null)
+    public function __construct($base_path = null)
     {
         $this->base_path = $base_path;
     }
@@ -80,7 +80,7 @@ class Container implements ContainerContract
      * @param Closure $resolver
      * @return void
      */
-    public function bind(string $name, ?Closure $resolver = null)
+    public function bind(string $name, $resolver = null)
     {
         if (is_null($resolver)) {
             $resolver = function (Container $app, $params) use ($name) {
@@ -101,7 +101,7 @@ class Container implements ContainerContract
      * @param Closure|null $resolver
      * @return void
      */
-    public function singleton(string $name, ?Closure $resolver = null)
+    public function singleton(string $name, $resolver = null)
     {
         if (is_null($resolver)) {
             $resolver = function (Container $app, $params) use ($name) {
@@ -412,7 +412,7 @@ class Container implements ContainerContract
      *
      * @return static
      */
-    public static function get_instance(?string $base_path = null): self
+    public static function get_instance($base_path = null): self
     {
         if (is_null(static::$instance)) {
             static::$instance = new static($base_path);

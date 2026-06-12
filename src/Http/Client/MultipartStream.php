@@ -29,7 +29,7 @@ class MultipartStream
      * @param array $data The data to be sent.
      * @param string|null $boundary The boundary string to use.
      */
-    public function __construct(array $data, ?string $boundary = null)
+    public function __construct(array $data, $boundary = null)
     {
         $this->boundary = $boundary ?? "MultipartBoundary" . wp_generate_password(20, false);
         $this->stream = $this->create_stream($data);
@@ -112,7 +112,7 @@ class MultipartStream
      *
      * @return string The stream element.
      */
-    protected function create_element($name, $contents, ?string $filename = null, array $headers = [])
+    protected function create_element($name, $contents, $filename = null, array $headers = [])
     {
         if (!empty($filename)) {
             return $this->create_file_stream($name, $contents, $filename, $headers);
@@ -133,8 +133,8 @@ class MultipartStream
      */
     protected function create_file_stream($name, $contents, $filename, array $headers = [])
     {
-        $headers['Content-Type'] ??= $this->get_mimetype($filename);
-        $headers['Content-Length'] ??= strlen($contents);
+        $headers['Content-Type'] = $headers['Content-Type'] ?? $this->get_mimetype($filename);
+        $headers['Content-Length'] = $headers['Content-Length'] ?? strlen($contents);
 
         $payload = '';
         $payload .= "--{$this->boundary}\r\n";

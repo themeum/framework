@@ -360,7 +360,7 @@ class QueryBuilder
      */
     public function from_subquery($query, $as)
     {
-        [$query, $bindings] = $this->create_subquery($query);
+        list($query, $bindings) = $this->create_subquery($query);
 
         return $this->from_raw(
             sprintf('(%s) as %s', $query, $as),
@@ -501,7 +501,7 @@ class QueryBuilder
      */
     public function select_subquery($query, $as)
     {
-        [$query, $bindings] = $this->create_subquery($query);
+        list($query, $bindings) = $this->create_subquery($query);
 
         return $this->select_raw(
             sprintf('(%s) as %s', $query, $as),
@@ -634,7 +634,7 @@ class QueryBuilder
             return $this->add_array_of_wheres($column, $boolean);
         }
 
-        [$value, $operator] = $this->prepare_value_and_operator(
+        list($value, $operator) = $this->prepare_value_and_operator(
             $value,
             $operator,
             func_num_args() === 2
@@ -645,14 +645,14 @@ class QueryBuilder
         }
 
         if ($this->is_queryable($column) && !is_null($operator)) {
-            [$sub_query, $bindings] = $this->create_subquery($column);
+            list($sub_query, $bindings) = $this->create_subquery($column);
 
             return $this->add_bindings($bindings, 'where')
                 ->where(new Expression('(' . $sub_query . ')'), $operator, $value, $boolean);
         }
 
         if ($this->is_invalid_operator($operator)) {
-            [$value, $operator] = [$operator, '='];
+            list($value, $operator) = [$operator, '='];
         }
 
         if ($this->is_queryable($value)) {
@@ -829,7 +829,7 @@ class QueryBuilder
      */
     public function or_where($column, $operator = null, $value = null)
     {
-        [$value, $operator] = $this->prepare_value_and_operator(
+        list($value, $operator) = $this->prepare_value_and_operator(
             $value,
             $operator,
             func_num_args() === 2
@@ -897,7 +897,7 @@ class QueryBuilder
         $type = $not ? 'not_in' : 'in';
 
         if ($this->is_queryable($values)) {
-            [$query, $bindings] = $this->create_subquery($values);
+            list($query, $bindings) = $this->create_subquery($values);
 
             $values = [new Expression($query)];
 
@@ -1132,14 +1132,14 @@ class QueryBuilder
      */
     public function where_date($column, $operator, $value = null, $boolean = 'and')
     {
-        [$value, $operator] = $this->prepare_value_and_operator(
+        list($value, $operator) = $this->prepare_value_and_operator(
             $value,
             $operator,
             func_num_args() === 2
         );
 
         if ($this->is_invalid_operator($operator)) {
-            [$value, $operator] = [$operator, '='];
+            list($value, $operator) = [$operator, '='];
         }
 
         $value = $this->flatten_value($value);
@@ -1164,7 +1164,7 @@ class QueryBuilder
      */
     public function or_where_date($column, $operator, $value = null)
     {
-        [$value, $operator] = $this->prepare_value_and_operator(
+        list($value, $operator) = $this->prepare_value_and_operator(
             $value,
             $operator,
             func_num_args() === 2
@@ -1211,14 +1211,14 @@ class QueryBuilder
      */
     public function where_time($column, $operator, $value = null, $boolean = 'and')
     {
-        [$value, $operator] = $this->prepare_value_and_operator(
+        list($value, $operator) = $this->prepare_value_and_operator(
             $value,
             $operator,
             func_num_args() === 2
         );
 
         if ($this->is_invalid_operator($operator)) {
-            [$value, $operator] = [$operator, '='];
+            list($value, $operator) = [$operator, '='];
         }
 
         $value = $this->flatten_value($value);
@@ -1243,7 +1243,7 @@ class QueryBuilder
      */
     public function or_where_time($column, $operator, $value = null)
     {
-        [$value, $operator] = $this->prepare_value_and_operator(
+        list($value, $operator) = $this->prepare_value_and_operator(
             $value,
             $operator,
             func_num_args() === 2
@@ -1275,7 +1275,7 @@ class QueryBuilder
         }
 
         if ($this->is_invalid_operator($operator)) {
-            [$second, $operator] = [$operator, '='];
+            list($second, $operator) = [$operator, '='];
         }
 
         $type = 'column';
@@ -1321,7 +1321,7 @@ class QueryBuilder
      */
     public function where_all($columns, $operator = null, $value = null, $boolean = 'and')
     {
-        [$value, $operator] = $this->prepare_value_and_operator(
+        list($value, $operator) = $this->prepare_value_and_operator(
             $value,
             $operator,
             func_num_args() === 2
@@ -1366,7 +1366,7 @@ class QueryBuilder
      */
     public function where_any($columns, $operator = null, $value = null, $boolean = 'and')
     {
-        [$value, $operator] = $this->prepare_value_and_operator(
+        list($value, $operator) = $this->prepare_value_and_operator(
             $value,
             $operator,
             func_num_args() === 2
@@ -1686,7 +1686,7 @@ class QueryBuilder
      */
     public function join_sub($query, $as, $first, $operator = null, $second = null, $type = 'inner', $where = false)
     {
-        [$query, $bindings] = $this->create_subquery($query);
+        list($query, $bindings) = $this->create_subquery($query);
 
         $expression = sprintf('(%s) as %s', $query, $this->compiler->wrap_table($as));
 
@@ -1899,7 +1899,7 @@ class QueryBuilder
             return $this;
         }
 
-        [$value, $operator] = $this->prepare_value_and_operator(
+        list($value, $operator) = $this->prepare_value_and_operator(
             $value,
             $operator,
             func_num_args() === 2
@@ -1910,7 +1910,7 @@ class QueryBuilder
         }
 
         if ($this->is_invalid_operator($operator)) {
-            [$value, $operator] = [$operator, '='];
+            list($value, $operator) = [$operator, '='];
         }
 
         $this->havings[] = compact('type', 'column', 'value', 'boolean');
@@ -1978,7 +1978,7 @@ class QueryBuilder
      */
     public function or_having($column, $operator = null, $value = null)
     {
-        [$value, $operator] = $this->prepare_value_and_operator($value, $operator, func_num_args() === 2);
+        list($value, $operator) = $this->prepare_value_and_operator($value, $operator, func_num_args() === 2);
 
         return $this->having($column, $operator, $value, 'or');
     }
@@ -2139,7 +2139,7 @@ class QueryBuilder
     public function order_by($column, $direction = 'asc')
     {
         if ($this->is_queryable($column)) {
-            [$query, $bindings] = $this->create_subquery($column);
+            list($query, $bindings) = $this->create_subquery($column);
 
             $column = new Expression('(' . $query . ')');
 
@@ -2369,7 +2369,7 @@ class QueryBuilder
 
             $this->parse_nested_relation($nested_relation, $parsed[$root], $nested);
         } else {
-            $parsed[$relation] ??= [];
+            $parsed[$relation] = $parsed[$relation] ?? [];
 
             if (is_array($nested)) {
                 $nested_parsed = $this->parse_relations($nested);
@@ -2641,7 +2641,7 @@ class QueryBuilder
     {
         return $this->connection->select(
             $this->to_sql(),
-            $this->get_bindings(),
+            $this->get_bindings()
         );
     }
 
@@ -3040,7 +3040,7 @@ class QueryBuilder
                 ];
             }
 
-            [$query, $bindings] = $this->parse_subquery($value);
+            list($query, $bindings) = $this->parse_subquery($value);
 
             return [
                 'value' => new Expression(sprintf('(%s)', $query)),
@@ -3119,7 +3119,13 @@ class QueryBuilder
         try {
             return $this->create(array_merge($attributes,  value($values)));
         } catch (UniqueConstraintViolationException $exception) {
-            return $this->where($attributes)->first() ?? throw $exception;
+            $found = $this->where($attributes)->first();
+
+            if (is_null($found)) {
+                throw $exception;
+            }
+
+            return $found;
         }
     }
 
@@ -3149,7 +3155,7 @@ class QueryBuilder
 
         return $this->perform_upsert(
             $this->add_timestamps_to_upsert_values($values),
-            $this->add_updated_at_to_upsert_columns($update),
+            $this->add_updated_at_to_upsert_columns($update)
         );
     }
 

@@ -93,25 +93,25 @@ class Application extends Container
      *
      * @var bool
      */
-    protected bool $booted = false;
+    protected $booted = false;
 
     /**
      * Booting callbacks
      * @var array
      */
-    protected array $booting_callbacks = [];
+    protected $booting_callbacks = [];
 
     /**
      * Booted callbacks
      * @var array
      */
-    protected array $booted_callbacks = [];
+    protected $booted_callbacks = [];
 
     /**
      * The application namespace
      * @var string
      */
-    protected string $namespace = '';
+    protected $namespace = '';
 
     /**
      * Cached namespaces resolved from composer PSR-4 paths.
@@ -124,20 +124,20 @@ class Application extends Container
      * The application prefix
      * @var string
      */
-    protected string $prefix = '';
+    protected $prefix = '';
 
     /**
      * The application is in development mode
      * @var string
      */
-    protected string $mode = 'production';
+    protected $mode = 'production';
 
     /**
      * Create a new application instance
      *
      * @return void
      */
-    public function __construct(?string $base_path = null)
+    public function __construct($base_path = null)
     {
         if ($base_path) {
             $this->set_base_path($base_path);

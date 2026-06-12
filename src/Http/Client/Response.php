@@ -242,7 +242,7 @@ class Response implements ArrayAccess
      * @return void
      * @throws \Exception
      */
-    public function offsetSet($offset, $value): void
+    public function offsetSet($offset, $value)
     {
         throw new Exception('Response data may not be mutated using array access.');
     }
@@ -254,7 +254,7 @@ class Response implements ArrayAccess
      * @return void
      * @throws \Exception
      */
-    public function offsetUnset($offset): void
+    public function offsetUnset($offset)
     {
         throw new Exception('Response data may not be mutated using array access.');
     }

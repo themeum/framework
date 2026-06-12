@@ -26,58 +26,58 @@ class Request
     /**
      * HTTP GET method.
      */
-    public const GET = 'GET';
+    const GET = 'GET';
 
     /**
      * HTTP POST method.
      */
-    public const POST = 'POST';
+    const POST = 'POST';
 
     /**
      * HTTP PUT method.
      */
-    public const PUT = 'PUT';
+    const PUT = 'PUT';
 
     /**
      * HTTP PATCH method.
      */
-    public const PATCH = 'PATCH';
+    const PATCH = 'PATCH';
 
     /**
      * HTTP DELETE method.
      */
-    public const DELETE = 'DELETE';
+    const DELETE = 'DELETE';
 
     /**
      * HTTP HEAD method.
      */
-    public const HEAD = 'HEAD';
+    const HEAD = 'HEAD';
 
     /**
      * HTTP OPTIONS method.
      */
-    public const OPTIONS = 'OPTIONS';
+    const OPTIONS = 'OPTIONS';
 
     /**
      * The base URL for the request.
      *
      * @var string
      */
-    protected string $base_url = '';
+    protected $base_url = '';
 
     /**
      * The options for the request.
      *
      * @var array
      */
-    protected array $options = [];
+    protected $options = [];
 
     /**
      * The body format for the request.
      *
      * @var string
      */
-    protected string $body_format;
+    protected $body_format;
 
     /**
      * The content for the request.
@@ -98,7 +98,7 @@ class Request
      *
      * @var array
      */
-    protected array $methods = [
+    protected $methods = [
         self::GET,
         self::POST,
         self::PUT,
@@ -362,7 +362,7 @@ class Request
      */
     public function content_type($type)
     {
-        $this->options['headers'] ??= [];
+        $this->options['headers'] = $this->options['headers'] ?? [];
         $this->options['headers']['Content-Type'] = $type;
 
         return $this;

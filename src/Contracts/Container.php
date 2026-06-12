@@ -10,19 +10,19 @@ interface Container
      * Bind a class to the container.
      *
      * @param string $name
-     * @param Closure $resolver
+     * @param Closure|null $resolver
      * @return void
      */
-    public function bind(string $name, Closure $resolver);
+    public function bind(string $name, $resolver = null);
 
     /**
      * Bind a class to the container as a singleton (lazy loaded).
      *
      * @param string $name
-     * @param Closure $resolver
+     * @param Closure|null $resolver
      * @return void
      */
-    public function singleton(string $name, Closure $resolver);
+    public function singleton(string $name, $resolver = null);
 
     /**
      * Bind an existing instance to the container.

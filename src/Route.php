@@ -726,7 +726,7 @@ class Route
                 throw new InvalidRoutActionException(sprintf('Invalid controller syntax for the route %s', $this->endpoint));
             }
 
-            [$controller, $method] = $this->action;
+            list($controller, $method) = $this->action;
 
             if (!class_exists($controller)) {
                 throw new InvalidRoutActionException(sprintf('Controller %s not found', $controller));

@@ -43,14 +43,14 @@ class DTO implements JsonSerializable, Arrayable
      *
      * @var array
      */
-    protected array $excluded_keys = [];
+    protected $excluded_keys = [];
 
     /**
      * Fields to pick from public attributes.
      *
      * @var array
      */
-    protected array $picked_keys = [];
+    protected $picked_keys = [];
 
     /**
      * Dto constructor.

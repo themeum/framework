@@ -21,7 +21,7 @@ class ListenerDiscovery implements Discoverable, Cacheable
      *
      * @var array
      */
-    protected array $listeners = [];
+    protected $listeners = [];
 
     /**
      * Discover the listeners from the file system.
@@ -67,7 +67,7 @@ class ListenerDiscovery implements Discoverable, Cacheable
 
             $this->listeners[$event][] = compact(
                 'listener',
-                'priority',
+                'priority'
             );
         }
 
@@ -178,7 +178,7 @@ class ListenerDiscovery implements Discoverable, Cacheable
      * @param string|null $path
      * @return $this
      */
-    public function cache(?string $path = null)
+    public function cache($path = null)
     {
         $path = $path ?? config_path('listeners.cache.php');
 

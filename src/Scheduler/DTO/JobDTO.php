@@ -11,19 +11,19 @@ class JobDTO extends DTO
      *
      * @var int
      */
-    public int $id;
+    public $id;
 
     /**
      * The arguments to be passed to the job handler.
      *
      * @var array
      */
-    public array $args;
+    public $args;
 
     /**
      * The resolver class or method for the job.
      *
      * @var string
      */
-    public string $resolver;
+    public $resolver;
 }

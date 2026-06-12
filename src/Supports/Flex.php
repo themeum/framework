@@ -192,7 +192,7 @@ class Flex implements ArrayAccess, IteratorAggregate, Arrayable, Jsonable, JsonS
      * @param  TValue  $value
      * @return void
      */
-    public function offsetSet($offset, $value): void
+    public function offsetSet($offset, $value)
     {
         $this->attributes[$offset] = $value;
     }
@@ -203,7 +203,7 @@ class Flex implements ArrayAccess, IteratorAggregate, Arrayable, Jsonable, JsonS
      * @param  TKey  $offset
      * @return void
      */
-    public function offsetUnset($offset): void
+    public function offsetUnset($offset)
     {
         unset($this->attributes[$offset]);
     }

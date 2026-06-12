@@ -9,5 +9,5 @@ interface Cacheable
      *
      * @return string
      */
-    public function cache(?string $path = null);
+    public function cache($path = null);
 }

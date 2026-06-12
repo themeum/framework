@@ -6,7 +6,7 @@ use Framework\Database\Seeder;
 
 class {{class_name}} extends Seeder
 {
-	public function run(): void
+	public function run()
 	{
 		// Add your seeder logic here
 	}

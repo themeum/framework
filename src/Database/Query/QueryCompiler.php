@@ -819,7 +819,7 @@ class QueryCompiler
             return $this->get_value($table);
         }
 
-        $prefix ??= $this->connection->get_table_prefix();
+        $prefix = $prefix ?? $this->connection->get_table_prefix();
 
         if (stripos($table, ' as ') !== false) {
             return $this->wrap_aliased_table($table, $prefix);
@@ -871,7 +871,7 @@ class QueryCompiler
     {
         $segments = preg_split('/\s+as\s+/i', $table);
 
-        $prefix ??= $this->connection->get_table_prefix();
+        $prefix = $prefix ?? $this->connection->get_table_prefix();
 
         return sprintf(
             '%s as %s',

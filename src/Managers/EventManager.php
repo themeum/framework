@@ -15,7 +15,7 @@ class EventManager
      *
      * @var array
      */
-    protected array $listeners = [];
+    protected $listeners = [];
 
     /**
      * Create a new event manager instance.

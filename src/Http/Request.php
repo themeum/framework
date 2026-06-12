@@ -56,7 +56,7 @@ class Request implements RequestContract, Arrayable
      * @since 1.0.0
      * @var array
      */ 
-    protected array $sanitized = [];
+    protected $sanitized = [];
 
     /**
      * The validated data.
@@ -64,7 +64,7 @@ class Request implements RequestContract, Arrayable
      * @since 1.0.0
      * @var array
      */
-    protected array $validated = [];
+    protected $validated = [];
 
     /**
      * Magic getter to retrieve request attributes.

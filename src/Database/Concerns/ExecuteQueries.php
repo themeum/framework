@@ -145,8 +145,8 @@ trait ExecuteQueries
      */
     public function ordered_chunk_by_id(int $count, Closure $callback, $column = null, $alias = null, $descending = false)
     {
-        $column ??= $this->default_key_name();
-        $alias ??= $column;
+        $column = $column ?? $this->default_key_name();
+        $alias = $alias ?? $column;
         $last_id = null;
         $skip = $this->get_offset();
         $remaining = $this->get_limit();
@@ -281,8 +281,8 @@ trait ExecuteQueries
             throw new InvalidArgumentException('Chunk size should be at least 1');
         }
 
-        $column ??= $this->default_key_name();
-        $alias ??= $column;
+        $column = $column ?? $this->default_key_name();
+        $alias = $alias ?? $column;
 
         $last_id = null;
 

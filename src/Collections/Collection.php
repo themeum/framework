@@ -881,7 +881,7 @@ class Collection implements ArrayAccess, Countable, Iterator, Arrayable, Jsonabl
      * @return void No return value
      * @since 1.0.0
      */
-    public function offsetSet($offset, $value): void
+    public function offsetSet($offset, $value)
     {
         if ($offset === null) {
             $this->items[] = $value;
@@ -900,7 +900,7 @@ class Collection implements ArrayAccess, Countable, Iterator, Arrayable, Jsonabl
      * @return void No return value
      * @since 1.0.0
      */
-    public function offsetUnset($offset): void
+    public function offsetUnset($offset)
     {
         unset($this->items[$offset]);
     }
@@ -967,7 +967,7 @@ class Collection implements ArrayAccess, Countable, Iterator, Arrayable, Jsonabl
      * @return void No return value
      * @since 1.0.0
      */
-    public function next(): void
+    public function next()
     {
         ++$this->position;
     }
@@ -981,7 +981,7 @@ class Collection implements ArrayAccess, Countable, Iterator, Arrayable, Jsonabl
      * @return void No return value
      * @since 1.0.0
      */
-    public function rewind(): void
+    public function rewind()
     {
         $this->position = 0;
     }

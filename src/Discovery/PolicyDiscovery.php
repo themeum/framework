@@ -18,7 +18,7 @@ class PolicyDiscovery implements Discoverable, Cacheable
      *
      * @var array
      */
-    protected array $policies = [];
+    protected $policies = [];
 
     /**
      * Discover the policies from the file system.
@@ -150,7 +150,7 @@ class PolicyDiscovery implements Discoverable, Cacheable
      * @param string|null $path
      * @return $this
      */
-    public function cache(?string $path = null)
+    public function cache($path = null)
     {
         $path = $path ?? config_path('policies.cache.php');
 

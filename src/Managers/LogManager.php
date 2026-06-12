@@ -9,9 +9,9 @@ use function Framework\base_path;
 
 class LogManager
 {
-    protected string $path;
+    protected $path;
 
-    public function __construct(?string $path = null)
+    public function __construct($path = null)
     {
         $this->path = $path ?? base_path('themeum-framework.log');
     }
@@ -116,7 +116,7 @@ class LogManager
             "[%s] [%s] %s\n",
             (new DateTime())->format('Y-m-d H:i:s'),
             strtoupper($type),
-            $message,
+            $message
         );
     }
 

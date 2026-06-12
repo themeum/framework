@@ -69,7 +69,7 @@ class HookServiceProvider extends ServiceProvider
                 $action->get_name(),
                 [$action, 'handle'],
                 $action->get_priority(),
-                $action->get_args_count(),
+                $action->get_args_count()
             );
         }
 
@@ -80,7 +80,7 @@ class HookServiceProvider extends ServiceProvider
                 $filter->get_name(),
                 [$filter, 'handle'],
                 $filter->get_priority(),
-                $filter->get_args_count(),
+                $filter->get_args_count()
             );
         }
     }

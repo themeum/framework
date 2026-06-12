@@ -18,8 +18,9 @@
 	"homepage": "https://github.com/themeum/framework",
 	"require": {
 		"php": ">=7.0",
-		"nesbot/carbon": "^2.0",
-		"carbonphp/carbon-doctrine-types": "^2.0"
+		"nesbot/carbon": "^1.39",
+		"symfony/translation": "^3.4",
+		"symfony/polyfill-mbstring": "~1.19.0"
 	},
 	"require-dev": {
 		"fakerphp/faker": "^1.23",
@@ -45,6 +46,14 @@
 	"config": {
 		"platform": {
 			"php": "7.0.33"
+		},
+		"audit": {
+			"ignore": {
+				"PKSA-csyb-yc4p-mnbs": "Carbon 1.x locale file inclusion advisory; locale is never set from user input in this framework."
+			}
+		},
+		"allow-plugins": {
+			"kylekatarnls/update-helper": false
 		}
 	},
 	"minimum-stability": "stable",

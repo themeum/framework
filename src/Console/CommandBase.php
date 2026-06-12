@@ -87,17 +87,17 @@ abstract class CommandBase
         return __DIR__ . '/stubs';
     }
 
-    protected function cli_error(string $message): void
+    protected function cli_error(string $message)
     {
         call_user_func(['\\WP_CLI', 'error'], $message);
     }
 
-    protected function cli_success(string $message): void
+    protected function cli_success(string $message)
     {
         call_user_func(['\\WP_CLI', 'success'], $message);
     }
 
-    protected function cli_line(string $message): void
+    protected function cli_line(string $message)
     {
         call_user_func(['\\WP_CLI', 'line'], $message);
     }

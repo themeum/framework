@@ -17,7 +17,7 @@ class OptionManager
      *
      * @var array
      */
-    protected static array $cache = [];
+    protected static $cache = [];
 
     /**
      * Set the value of an option.
