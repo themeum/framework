@@ -131,4 +131,68 @@ class SomoyTest extends TestCase
         $this->assertTrue($tomorrow->is_after($today));
         $this->assertTrue($today->is_same_day($yesterday->copy()->add_day()));
     }
+
+    public function test_diff_for_humans_reports_seconds_ago(): void
+    {
+        $now = Somoy::parse('2024-05-01 14:30:45', new DateTimeZone('UTC'));
+        $date = $now->copy()->sub_seconds(1);
+
+        $this->assertSame('1 second ago', $date->diff_for_humans($now));
+    }
+
+    public function test_diff_for_humans_reports_plural_minutes_ago(): void
+    {
+        $now = Somoy::parse('2024-05-01 14:30:45', new DateTimeZone('UTC'));
+        $date = $now->copy()->sub_minutes(5);
+
+        $this->assertSame('5 minutes ago', $date->diff_for_humans($now));
+    }
+
+    public function test_diff_for_humans_reports_future_dates(): void
+    {
+        $now = Somoy::parse('2024-05-01 14:30:45', new DateTimeZone('UTC'));
+        $date = $now->copy()->add_hours(3);
+
+        $this->assertSame('in 3 hours', $date->diff_for_humans($now));
+    }
+
+    public function test_diff_for_humans_defaults_to_now(): void
+    {
+        $date = Somoy::now()->sub_minutes(10);
+
+        $this->assertSame('10 minutes ago', $date->diff_for_humans());
+    }
+
+    public function test_diff_for_humans_reports_days_under_a_week(): void
+    {
+        $now = Somoy::parse('2024-05-10 00:00:00', new DateTimeZone('UTC'));
+        $date = $now->copy()->sub_days(3);
+
+        $this->assertSame('3 days ago', $date->diff_for_humans($now));
+    }
+
+    public function test_diff_for_humans_reports_weeks_from_leftover_days(): void
+    {
+        $now = Somoy::parse('2024-05-11 00:00:00', new DateTimeZone('UTC'));
+        $date = $now->copy()->sub_days(10);
+
+        $this->assertSame('1 week ago', $date->diff_for_humans($now));
+    }
+
+    public function test_diff_for_humans_uses_calendar_exact_months(): void
+    {
+        // Jan (31 days) + Feb 2023 (28 days, not a leap year) = 59 days, which
+        // a flat 30-day-per-month approximation would floor down to 1 month.
+        $earlier = Somoy::parse('2023-01-01 00:00:00', new DateTimeZone('UTC'));
+        $later = Somoy::parse('2023-03-01 00:00:00', new DateTimeZone('UTC'));
+
+        $this->assertSame('2 months ago', $earlier->diff_for_humans($later));
+    }
+
+    public function test_diff_for_humans_reports_just_now_for_the_same_moment(): void
+    {
+        $now = Somoy::parse('2024-05-01 14:30:45', new DateTimeZone('UTC'));
+
+        $this->assertSame('just now', $now->diff_for_humans($now->copy()));
+    }
 }

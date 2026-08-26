@@ -1066,6 +1066,61 @@ class Somoy extends DateTime implements SomoyInterface
     }
 
     /**
+     * Get a human-readable difference between the instance and another date.
+     *
+     * Reads as "X unit(s) ago" when the instance is earlier than the given
+     * date, or "in X unit(s)" when it is later. Uses the calendar-exact diff
+     * (leap years and actual month lengths accounted for) and reports the
+     * largest applicable unit, e.g. "2 months ago" rather than "60 days ago".
+     *
+     * @param DateTimeInterface|string|int|float|null $other The date to
+     *     compare with. Defaults to now.
+     *
+     * @return string The human-readable difference.
+     *
+     * @throws InvalidDateFormatException When $other cannot be parsed.
+     *
+     * @since 3.1.0
+     */
+    public function diff_for_humans($other = null)
+    {
+        $other = $other === null ? static::now($this->get_timezone()) : $this->resolve($other);
+        $interval = $this->diff($other);
+
+        if (!$interval->y && !$interval->m && !$interval->d && !$interval->h && !$interval->i && !$interval->s) {
+            return 'just now';
+        }
+
+        $is_past = $interval->invert === 0;
+
+        if ($interval->y > 0) {
+            return static::format_human_diff($interval->y, 'year', $is_past);
+        }
+
+        if ($interval->m > 0) {
+            return static::format_human_diff($interval->m, 'month', $is_past);
+        }
+
+        if ($interval->d >= 7) {
+            return static::format_human_diff((int) floor($interval->d / 7), 'week', $is_past);
+        }
+
+        if ($interval->d > 0) {
+            return static::format_human_diff($interval->d, 'day', $is_past);
+        }
+
+        if ($interval->h > 0) {
+            return static::format_human_diff($interval->h, 'hour', $is_past);
+        }
+
+        if ($interval->i > 0) {
+            return static::format_human_diff($interval->i, 'minute', $is_past);
+        }
+
+        return static::format_human_diff($interval->s, 'second', $is_past);
+    }
+
+    /**
      * Convert the instance to a SQL safe date string.
      *
      * @return string The formatted date string.
@@ -1361,6 +1416,24 @@ class Somoy extends DateTime implements SomoyInterface
                 $exception
             );
         }
+    }
+
+    /**
+     * Format a single diff_for_humans() unit and value into its final string.
+     *
+     * @param int $value The amount of the unit.
+     * @param string $unit The singular unit name.
+     * @param bool $is_past Whether the instance is earlier than the compared date.
+     *
+     * @return string The formatted difference.
+     *
+     * @since 3.1.0
+     */
+    protected static function format_human_diff($value, $unit, $is_past)
+    {
+        $unit = $value === 1 ? $unit : $unit . 's';
+
+        return $is_past ? sprintf('%d %s ago', $value, $unit) : sprintf('in %d %s', $value, $unit);
     }
 
     /**

@@ -736,6 +736,23 @@ interface SomoyInterface extends DateTimeInterface, JsonSerializable
     public function to_sql_datetime_string();
 
     /**
+     * Get a human-readable difference between the instance and another date.
+     *
+     * Reads as "X unit(s) ago" when the instance is earlier than the given
+     * date, or "in X unit(s)" when it is later.
+     *
+     * @param DateTimeInterface|string|int|float|null $other The date to
+     *     compare with. Defaults to now.
+     *
+     * @return string The human-readable difference.
+     *
+     * @throws \Framework\Exceptions\InvalidDateFormatException When $other cannot be parsed.
+     *
+     * @since 3.1.0
+     */
+    public function diff_for_humans($other = null);
+
+    /**
      * Get the unix timestamp of the instance.
      *
      * @return int The unix timestamp.
