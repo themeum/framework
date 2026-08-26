@@ -153,7 +153,7 @@ class SomoyTest extends TestCase
         $now = Somoy::parse('2024-05-01 14:30:45', new DateTimeZone('UTC'));
         $date = $now->copy()->add_hours(3);
 
-        $this->assertSame('in 3 hours', $date->diff_for_humans($now));
+        $this->assertSame('3 hours from now', $date->diff_for_humans($now));
     }
 
     public function test_diff_for_humans_defaults_to_now(): void
@@ -194,5 +194,99 @@ class SomoyTest extends TestCase
         $now = Somoy::parse('2024-05-01 14:30:45', new DateTimeZone('UTC'));
 
         $this->assertSame('just now', $now->diff_for_humans($now->copy()));
+    }
+
+    public function test_diff_for_humans_supports_short_units(): void
+    {
+        $now = Somoy::parse('2024-05-01 14:30:45', new DateTimeZone('UTC'));
+        $date = $now->copy()->sub_minutes(5);
+
+        $this->assertSame('5min ago', $date->diff_for_humans($now, null, true));
+    }
+
+    public function test_diff_for_humans_joins_multiple_parts(): void
+    {
+        $later = Somoy::parse('2023-03-01 00:00:00', new DateTimeZone('UTC'));
+        $earlier = $later->copy()->sub_years(1)->sub_months(2);
+
+        $this->assertSame('1 year 2 months ago', $earlier->diff_for_humans($later, null, false, 2));
+    }
+
+    public function test_diff_for_humans_supports_absolute_syntax(): void
+    {
+        $now = Somoy::parse('2024-05-01 14:30:45', new DateTimeZone('UTC'));
+        $date = $now->copy()->sub_hours(3);
+
+        $this->assertSame('3 hours', $date->diff_for_humans($now, Somoy::DIFF_ABSOLUTE));
+    }
+
+    public function test_diff_for_humans_supports_relative_to_other_syntax(): void
+    {
+        $now = Somoy::parse('2024-05-01 14:30:45', new DateTimeZone('UTC'));
+        $earlier = $now->copy()->sub_hours(3);
+        $later = $now->copy()->add_hours(3);
+
+        $this->assertSame('3 hours before', $earlier->diff_for_humans($now, Somoy::DIFF_RELATIVE_TO_OTHER));
+        $this->assertSame('3 hours after', $later->diff_for_humans($now, Somoy::DIFF_RELATIVE_TO_OTHER));
+    }
+
+    public function test_diff_for_humans_reports_one_day_words(): void
+    {
+        $now = Somoy::parse('2024-05-02 00:00:00', new DateTimeZone('UTC'));
+        $yesterday = $now->copy()->sub_days(1);
+        $tomorrow = $now->copy()->add_days(1);
+
+        $this->assertSame('yesterday', $yesterday->diff_for_humans($now));
+        $this->assertSame('tomorrow', $tomorrow->diff_for_humans($now));
+    }
+
+    public function test_diff_for_humans_reports_two_day_words(): void
+    {
+        $now = Somoy::parse('2024-05-03 00:00:00', new DateTimeZone('UTC'));
+        $before_yesterday = $now->copy()->sub_days(2);
+        $after_tomorrow = $now->copy()->add_days(2);
+
+        $this->assertSame('before yesterday', $before_yesterday->diff_for_humans($now));
+        $this->assertSame('after tomorrow', $after_tomorrow->diff_for_humans($now));
+    }
+
+    public function test_diff_for_humans_can_disable_day_words(): void
+    {
+        $now = Somoy::parse('2024-05-02 00:00:00', new DateTimeZone('UTC'));
+        $date = $now->copy()->sub_days(1);
+        $options = Somoy::NO_ZERO_DIFF | Somoy::JUST_NOW;
+
+        $this->assertSame('1 day ago', $date->diff_for_humans($now, null, false, 1, $options));
+    }
+
+    public function test_diff_for_humans_reports_zero_diff_without_just_now(): void
+    {
+        $now = Somoy::parse('2024-05-01 14:30:45', new DateTimeZone('UTC'));
+
+        $this->assertSame('1 second ago', $now->diff_for_humans($now->copy(), null, false, 1, Somoy::NO_ZERO_DIFF));
+    }
+
+    public function test_diff_for_humans_reports_zero_seconds_with_no_zero_diff_options(): void
+    {
+        $now = Somoy::parse('2024-05-01 14:30:45', new DateTimeZone('UTC'));
+
+        $this->assertSame('0 seconds', $now->diff_for_humans($now->copy(), Somoy::DIFF_ABSOLUTE, false, 1, 0));
+    }
+
+    public function test_diff_for_humans_skips_zero_units_by_default(): void
+    {
+        $now = Somoy::parse('2024-05-01 14:30:45', new DateTimeZone('UTC'));
+        $date = $now->copy()->sub_hours(2)->sub_seconds(15);
+
+        $this->assertSame('2 hours 15 seconds ago', $date->diff_for_humans($now, null, false, 3));
+    }
+
+    public function test_diff_for_humans_sequential_parts_only_stops_at_first_zero(): void
+    {
+        $now = Somoy::parse('2024-05-01 14:30:45', new DateTimeZone('UTC'));
+        $date = $now->copy()->sub_hours(2)->sub_seconds(15);
+        $options = Somoy::SEQUENTIAL_PARTS_ONLY;
+
+        $this->assertSame('2 hours ago', $date->diff_for_humans($now, null, false, 3, $options));
     }
 }

@@ -738,11 +738,23 @@ interface SomoyInterface extends DateTimeInterface, JsonSerializable
     /**
      * Get a human-readable difference between the instance and another date.
      *
-     * Reads as "X unit(s) ago" when the instance is earlier than the given
-     * date, or "in X unit(s)" when it is later.
+     * Modeled on Carbon's diffForHumans(). The DIFF_* syntax constants and
+     * the NO_ZERO_DIFF / JUST_NOW / ONE_DAY_WORDS / TWO_DAY_WORDS /
+     * SEQUENTIAL_PARTS_ONLY option constants are declared on the concrete
+     * Somoy class rather than here, for the same reason the format constants
+     * above are: implementations must be able to override them, which PHP
+     * 7.4 forbids for a constant inherited from an interface.
      *
      * @param DateTimeInterface|string|int|float|null $other The date to
      *     compare with. Defaults to now.
+     * @param int|null $syntax One of the DIFF_* constants. Defaults to
+     *     DIFF_RELATIVE_TO_NOW.
+     * @param bool $short Use abbreviated unit names, e.g. "5min" instead of
+     *     "5 minutes".
+     * @param int $parts How many of the largest non-zero units to include,
+     *     clamped between 1 and 7.
+     * @param int|null $options A bitmask of the option constants. Defaults to
+     *     NO_ZERO_DIFF | JUST_NOW | ONE_DAY_WORDS | TWO_DAY_WORDS.
      *
      * @return string The human-readable difference.
      *
@@ -750,7 +762,7 @@ interface SomoyInterface extends DateTimeInterface, JsonSerializable
      *
      * @since 3.1.0
      */
-    public function diff_for_humans($other = null);
+    public function diff_for_humans($other = null, $syntax = null, $short = false, $parts = 1, $options = null);
 
     /**
      * Get the unix timestamp of the instance.
