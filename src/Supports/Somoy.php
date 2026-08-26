@@ -85,6 +85,95 @@ class Somoy extends DateTime implements SomoyInterface
     public const JSON_FORMAT = 'Y-m-d\TH:i:s.u';
 
     /**
+     * A diff_for_humans() syntax: no direction wording, e.g. "1 year 2 months".
+     *
+     * @var int
+     *
+     * @since 3.1.0
+     */
+    public const DIFF_ABSOLUTE = 1;
+
+    /**
+     * A diff_for_humans() syntax: resolves to DIFF_RELATIVE_TO_NOW.
+     *
+     * @var int
+     *
+     * @since 3.1.0
+     */
+    public const DIFF_RELATIVE_AUTO = 0;
+
+    /**
+     * A diff_for_humans() syntax: "... ago" / "... from now".
+     *
+     * @var int
+     *
+     * @since 3.1.0
+     */
+    public const DIFF_RELATIVE_TO_NOW = 2;
+
+    /**
+     * A diff_for_humans() syntax: "... before" / "... after".
+     *
+     * @var int
+     *
+     * @since 3.1.0
+     */
+    public const DIFF_RELATIVE_TO_OTHER = 3;
+
+    /**
+     * A diff_for_humans() option: show "1 second ago" rather than "0 seconds
+     * ago" when the two dates fall on the same second and JUST_NOW does not
+     * apply.
+     *
+     * @var int
+     *
+     * @since 3.1.0
+     */
+    public const NO_ZERO_DIFF = 01;
+
+    /**
+     * A diff_for_humans() option: report "just now" instead of "0 seconds
+     * ago" when comparing against now and the dates fall on the same second.
+     *
+     * @var int
+     *
+     * @since 3.1.0
+     */
+    public const JUST_NOW = 02;
+
+    /**
+     * A diff_for_humans() option: report "yesterday" / "tomorrow" instead of
+     * "1 day ago" / "1 day from now" when comparing against now.
+     *
+     * @var int
+     *
+     * @since 3.1.0
+     */
+    public const ONE_DAY_WORDS = 04;
+
+    /**
+     * A diff_for_humans() option: report "before yesterday" / "after
+     * tomorrow" instead of "2 days ago" / "2 days from now" when comparing
+     * against now.
+     *
+     * @var int
+     *
+     * @since 3.1.0
+     */
+    public const TWO_DAY_WORDS = 010;
+
+    /**
+     * A diff_for_humans() option: stop collecting parts at the first
+     * zero-value unit instead of skipping over it, e.g. with $parts = 3,
+     * "2 hours 15 seconds" (0 minutes skipped) becomes just "2 hours".
+     *
+     * @var int
+     *
+     * @since 3.1.0
+     */
+    public const SEQUENTIAL_PARTS_ONLY = 020;
+
+    /**
      * The units that may be read as properties.
      *
      * @var array
@@ -104,6 +193,25 @@ class Somoy extends DateTime implements SomoyInterface
         'day_of_year' => 'z',
         'days_in_month' => 't',
         'week_of_year' => 'W',
+    ];
+
+    /**
+     * The units used by diff_for_humans(), keyed the way they are read off
+     * the DateInterval from diff() ("w" is derived from leftover days), each
+     * paired with its long singular name and short abbreviation.
+     *
+     * @var array<string, array{0: string, 1: string}>
+     *
+     * @since 3.1.0
+     */
+    protected static $human_diff_units = [
+        'y' => ['year', 'y'],
+        'm' => ['month', 'm'],
+        'w' => ['week', 'w'],
+        'd' => ['day', 'd'],
+        'h' => ['hour', 'h'],
+        'i' => ['minute', 'min'],
+        's' => ['second', 's'],
     ];
 
     /**
@@ -1066,6 +1174,134 @@ class Somoy extends DateTime implements SomoyInterface
     }
 
     /**
+     * Get a human-readable difference between the instance and another date.
+     *
+     * Modeled on Carbon's diffForHumans(): calendar-exact (leap years and
+     * actual month lengths accounted for), reports up to $parts of the
+     * largest non-zero units joined by a space, and supports abbreviated
+     * units and the day-wording / zero-diff options below.
+     *
+     * Unlike Carbon, $syntax defaults to DIFF_RELATIVE_TO_NOW ("... ago" /
+     * "... from now") whether or not $other is given explicitly, rather than
+     * falling back to "... before" / "... after" whenever $other is passed.
+     * Pass DIFF_RELATIVE_TO_OTHER explicitly to get that wording.
+     *
+     * Carbon's ROUND / FLOOR / CEIL options, which round a smaller unit into
+     * the last unit shown when $parts truncates the interval, are not
+     * implemented here; truncated units are simply dropped.
+     *
+     * @param DateTimeInterface|string|int|float|null $other The date to
+     *     compare with. Defaults to now.
+     * @param int|null $syntax One of the DIFF_* constants. Defaults to
+     *     DIFF_RELATIVE_TO_NOW; DIFF_RELATIVE_AUTO behaves the same way.
+     * @param bool $short Use abbreviated unit names, e.g. "5min" instead of
+     *     "5 minutes".
+     * @param int $parts How many of the largest non-zero units to include,
+     *     clamped between 1 and 7.
+     * @param int|null $options A bitmask of NO_ZERO_DIFF, JUST_NOW,
+     *     ONE_DAY_WORDS, TWO_DAY_WORDS and SEQUENTIAL_PARTS_ONLY. Defaults to
+     *     NO_ZERO_DIFF | JUST_NOW | ONE_DAY_WORDS | TWO_DAY_WORDS.
+     *
+     * @return string The human-readable difference.
+     *
+     * @throws InvalidDateFormatException When $other cannot be parsed.
+     *
+     * @since 3.1.0
+     */
+    public function diff_for_humans(
+        $other = null,
+        $syntax = null,
+        $short = false,
+        $parts = 1,
+        $options = null
+    ) {
+        $other = $other === null ? static::now($this->get_timezone()) : $this->resolve($other);
+
+        $syntax = $syntax === null ? static::DIFF_RELATIVE_TO_NOW : (int) $syntax;
+
+        if ($syntax === static::DIFF_RELATIVE_AUTO) {
+            $syntax = static::DIFF_RELATIVE_TO_NOW;
+        }
+
+        if ($options === null) {
+            $options = static::NO_ZERO_DIFF | static::JUST_NOW | static::ONE_DAY_WORDS | static::TWO_DAY_WORDS;
+        }
+
+        $parts = min(7, max(1, (int) $parts));
+        $interval = $this->diff($other);
+        $is_past = $interval->invert === 0;
+        $is_absolute = $syntax === static::DIFF_ABSOLUTE;
+        $is_relative_to_now = $syntax === static::DIFF_RELATIVE_TO_NOW;
+
+        $values = [
+            'y' => $interval->y,
+            'm' => $interval->m,
+            'w' => (int) floor($interval->d / 7),
+            'd' => $interval->d % 7,
+            'h' => $interval->h,
+            'i' => $interval->i,
+            's' => $interval->s,
+        ];
+
+        $is_whole_day_diff = !$values['y'] && !$values['m'] && !$values['w']
+            && !$values['h'] && !$values['i'] && !$values['s'];
+
+        if ($is_relative_to_now && $is_whole_day_diff) {
+            if ($options & static::TWO_DAY_WORDS && $values['d'] === 2) {
+                return $is_past ? 'before yesterday' : 'after tomorrow';
+            }
+
+            if ($options & static::ONE_DAY_WORDS && $values['d'] === 1) {
+                return $is_past ? 'yesterday' : 'tomorrow';
+            }
+        }
+
+        $is_zero_diff = !array_filter($values);
+
+        if ($is_relative_to_now && $is_zero_diff && $options & static::JUST_NOW) {
+            return 'just now';
+        }
+
+        if ($is_zero_diff && $options & static::NO_ZERO_DIFF) {
+            $values['s'] = 1;
+        }
+
+        $formatted_parts = [];
+
+        foreach ($values as $unit => $value) {
+            if ($value === 0) {
+                if ($options & static::SEQUENTIAL_PARTS_ONLY && $formatted_parts) {
+                    break;
+                }
+
+                continue;
+            }
+
+            $formatted_parts[] = static::format_human_diff_unit($unit, $value, $short);
+
+            if (count($formatted_parts) >= $parts) {
+                break;
+            }
+        }
+
+        if (!$formatted_parts) {
+            $formatted_parts[] = static::format_human_diff_unit('s', 0, $short);
+        }
+
+        $formatted = implode(' ', $formatted_parts);
+
+        if ($is_absolute) {
+            return $formatted;
+        }
+
+        if ($is_relative_to_now) {
+            return $is_past ? $formatted . ' ago' : $formatted . ' from now';
+        }
+
+        return $is_past ? $formatted . ' before' : $formatted . ' after';
+    }
+
+    /**
      * Convert the instance to a SQL safe date string.
      *
      * @return string The formatted date string.
@@ -1361,6 +1597,28 @@ class Somoy extends DateTime implements SomoyInterface
                 $exception
             );
         }
+    }
+
+    /**
+     * Format a single diff_for_humans() unit into its "value unit" string.
+     *
+     * @param string $unit The unit key, as used in $human_diff_units (y, m, w, d, h, i, s).
+     * @param int $value The amount of the unit.
+     * @param bool $short Whether to use the abbreviated unit name.
+     *
+     * @return string The formatted "value unit" pair.
+     *
+     * @since 3.1.0
+     */
+    protected static function format_human_diff_unit($unit, $value, $short)
+    {
+        [$name, $short_name] = static::$human_diff_units[$unit];
+
+        if ($short) {
+            return $value . $short_name;
+        }
+
+        return $value . ' ' . ($value === 1 ? $name : $name . 's');
     }
 
     /**
