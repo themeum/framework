@@ -92,6 +92,50 @@ class Filesystem
     }
 
     /**
+     * List a bounded number of files directly inside a directory.
+     *
+     * Reads directory entries one at a time and stops as soon as the limit is reached, unlike
+     * glob(), which must read and sort the entire directory before returning anything. A sweep
+     * over a directory that has accumulated many entries stays bounded in memory this way, where
+     * glob() would materialise the full listing regardless of how many entries the caller
+     * actually needs.
+     *
+     * @param string $directory The directory to list.
+     * @param int $limit The maximum number of files to return. Zero means no limit.
+     * @param string|null $extension Only return files with this extension, without the dot.
+     *
+     * @return array
+     *
+     * @since 1.0.0
+     */
+    public function scan_directory($directory, int $limit = 0, $extension = null)
+    {
+        $paths = [];
+
+        if (!is_dir($directory)) {
+            return $paths;
+        }
+
+        foreach (new \DirectoryIterator($directory) as $item) {
+            if ($item->isDot() || $item->isDir()) {
+                continue;
+            }
+
+            if (!is_null($extension) && $item->getExtension() !== $extension) {
+                continue;
+            }
+
+            $paths[] = $item->getPathname();
+
+            if ($limit > 0 && count($paths) >= $limit) {
+                break;
+            }
+        }
+
+        return $paths;
+    }
+
+    /**
      * Get the base name of a path.
      *
      * @param mixed $path The path.
