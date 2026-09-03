@@ -13,6 +13,8 @@ namespace Framework\Cache;
 defined('ABSPATH') || exit;
 
 use Closure;
+use Framework\Cache\Locks\DatabaseLock;
+use Framework\Cache\Locks\ObjectCacheLock;
 use Framework\Cache\Stores\ArrayStore;
 use Framework\Cache\Stores\DatabaseStore;
 use Framework\Cache\Stores\FileStore;
@@ -445,6 +447,46 @@ class CacheManager
 
             return ($config['gc'] ?? 'daily') !== false;
         }));
+    }
+
+    /**
+     * Get an atomic lock.
+     *
+     * Acquisition never blocks, and the lifetime is mandatory so that a request which dies while
+     * holding a lock cannot block a key permanently. The object cache backend is used when a
+     * persistent object cache is present, because wp_cache_add() is a genuine atomic add there;
+     * otherwise the options table backend is used, which is atomic through the unique index over
+     * option_name. Both are atomic, so a lock behaves the same on any site.
+     *
+     * @param string $name The lock name.
+     * @param int $seconds The number of seconds the lock survives for.
+     * @param string|null $owner The owner token, or null to generate one.
+     *
+     * @return \Framework\Contracts\Lock
+     *
+     * @since 1.0.0
+     */
+    public function lock(string $name, int $seconds = 60, $owner = null)
+    {
+        $prefix = $this->store()->get_prefix();
+
+        if ($this->uses_external_object_cache()) {
+            return new ObjectCacheLock($name, $seconds, $prefix . 'locks', $owner);
+        }
+
+        return new DatabaseLock($name, $seconds, $prefix, $owner);
+    }
+
+    /**
+     * Determine whether the site runs a persistent object cache drop in.
+     *
+     * @return bool
+     *
+     * @since 1.0.0
+     */
+    public function uses_external_object_cache()
+    {
+        return function_exists('wp_using_ext_object_cache') ? (bool) wp_using_ext_object_cache() : false;
     }
 
     /**

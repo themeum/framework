@@ -18,6 +18,8 @@ use Exception;
 use Framework\Collections\Collection;
 use Framework\Contracts\Middleware;
 use Framework\Exceptions\AuthorizationException;
+use Framework\Exceptions\HttpException;
+use Framework\Exceptions\InvalidMiddlewareException;
 use Framework\Exceptions\InvalidRoutActionException;
 use Framework\Exceptions\ModelNotFoundException;
 use Framework\Http\Request;
@@ -130,6 +132,15 @@ class Route
      * @since 1.0.0
      */
     protected static $group_stack = [];
+
+    /**
+     * Middleware classes registered under a short alias, keyed by alias.
+     *
+     * @var array
+     *
+     * @since 1.0.0
+     */
+    protected static $middleware_aliases = [];
 
     /**
      * Shared SiteRouter instance for URL generation and flush.
@@ -602,6 +613,30 @@ class Route
         $this->middlewares[] = $middleware;
 
         return $this;
+    }
+
+    /**
+     * Rate limit the current route.
+     *
+     * Sugar over the throttle middleware, so that a limit can be declared without writing the
+     * string form. The decay is expressed in minutes, matching the string form and Laravel.
+     *
+     * @param int|string $max_attempts The number of attempts allowed per decay window, or the
+     *                                 name of a registered rate limiter.
+     * @param int $decay_minutes The length of the window in minutes. Ignored when a limiter name
+     *                           is given, because the limiter carries its own window.
+     *
+     * @return $this
+     *
+     * @since 1.0.0
+     */
+    public function throttle($max_attempts, int $decay_minutes = 1)
+    {
+        if (!is_numeric($max_attempts)) {
+            return $this->middleware('throttle:' . $max_attempts);
+        }
+
+        return $this->middleware(sprintf('throttle:%d,%d', $max_attempts, $decay_minutes));
     }
 
     /**
@@ -1892,17 +1927,93 @@ class Route
             array_reverse($this->middlewares),
             function ($next, $middleware) {
                 return function ($request) use ($next, $middleware) {
-                    if (!is_subclass_of($middleware, Middleware::class)) {
+                    [$class, $parameters] = static::parse_middleware($middleware);
+
+                    if (!is_subclass_of($class, Middleware::class)) {
                         throw new InvalidArgumentException(
-                            sprintf('Middleware %s must implement the %s interface.', $middleware, Middleware::class)
+                            sprintf('Middleware %s must implement the %s interface.', $class, Middleware::class)
                         );
                     }
 
-                    return (new $middleware())->handle($request, $next);
+                    return (new $class())->handle($request, $next, ...$parameters);
                 };
             },
             $destination
         );
+    }
+
+    /**
+     * Register a middleware class under a short alias.
+     *
+     * The alias can then be used anywhere a route declares middleware, on its own or carrying
+     * arguments after a colon.
+     *
+     * @param string $name The alias.
+     * @param string $class The middleware class the alias resolves to.
+     *
+     * @return void
+     *
+     * @since 1.0.0
+     */
+    public static function middleware_alias(string $name, string $class)
+    {
+        static::$middleware_aliases[$name] = $class;
+    }
+
+    /**
+     * Get every registered middleware alias.
+     *
+     * @return array
+     *
+     * @since 1.0.0
+     */
+    public static function get_middleware_aliases()
+    {
+        return static::$middleware_aliases;
+    }
+
+    /**
+     * Split a middleware reference into the class it names and the arguments it carries.
+     *
+     * Everything before the first colon is the name, which is resolved through the alias registry
+     * and otherwise treated as a class name. Everything after it is a comma separated argument
+     * list. A reference without a colon carries no arguments, which is why a fully qualified class
+     * name keeps working untouched.
+     *
+     * @param mixed $middleware The middleware reference declared on the route.
+     *
+     * @return array The resolved class name and its arguments.
+     *
+     * @throws InvalidMiddlewareException When an alias cannot be resolved to a class.
+     *
+     * @since 1.0.0
+     */
+    protected static function parse_middleware($middleware)
+    {
+        if (!is_string($middleware)) {
+            return [$middleware, []];
+        }
+
+        $name = $middleware;
+        $parameters = [];
+
+        if (strpos($middleware, ':') !== false) {
+            [$name, $arguments] = explode(':', $middleware, 2);
+
+            $parameters = $arguments === '' ? [] : explode(',', $arguments);
+        }
+
+        if (isset(static::$middleware_aliases[$name])) {
+            return [static::$middleware_aliases[$name], $parameters];
+        }
+
+        if (!class_exists($name)) {
+            throw new InvalidMiddlewareException(
+                sprintf('Middleware [%s] is not a registered alias and is not a resolvable class.', $name)
+            );
+        }
+
+        return [$name, $parameters];
     }
 
     /**
@@ -1932,6 +2043,15 @@ class Route
             $this->resolved_request = $this->expose($request);
 
             return true;
+        } catch (HttpException $exception) {
+            return new WP_Error(
+                $exception->error_code(),
+                $exception->getMessage(),
+                array_merge(
+                    ['status' => $exception->get_status()],
+                    $exception->get_headers() ? ['headers' => $exception->get_headers()] : []
+                )
+            );
         } catch (AuthorizationException $exception) {
             return new WP_Error(
                 'rest_forbidden',

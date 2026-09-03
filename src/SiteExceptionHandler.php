@@ -11,6 +11,7 @@ namespace Framework;
 defined('ABSPATH') || exit;
 
 use Framework\Exceptions\AuthorizationException;
+use Framework\Exceptions\HttpException;
 use Framework\Exceptions\ModelNotFoundException;
 use Framework\Exceptions\ValidationException;
 use Framework\Http\Response;
@@ -29,6 +30,12 @@ class SiteExceptionHandler
      */
     public static function handle(Exception $exception)
     {
+        if ($exception instanceof HttpException) {
+            static::send_headers($exception->get_headers());
+
+            static::fail($exception->get_status(), $exception->getMessage() ?: 'Request failed');
+        }
+
         if ($exception instanceof AuthorizationException) {
             static::fail(Response::FORBIDDEN, $exception->getMessage() ?: 'Forbidden');
         }
@@ -55,6 +62,29 @@ class SiteExceptionHandler
         }
 
         static::fail($status, $exception->getMessage() ?: 'Internal Server Error');
+    }
+
+    /**
+     * Emit the headers an HTTP exception asked to travel with the response.
+     *
+     * Headers must be written before wp_die() sends the body, so this runs ahead of the failure
+     * page rather than alongside it.
+     *
+     * @param array $headers The headers to send.
+     *
+     * @return void
+     *
+     * @since 1.0.0
+     */
+    protected static function send_headers(array $headers)
+    {
+        if (headers_sent()) {
+            return;
+        }
+
+        foreach ($headers as $name => $value) {
+            header(sprintf('%s: %s', $name, $value), true);
+        }
     }
 
     /**

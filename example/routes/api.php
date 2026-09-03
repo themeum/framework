@@ -31,6 +31,26 @@ use function Framework\session;
 
 Route::set_namespace('framework/v1');
 
+/*
+ * Rate limited routes.
+ *
+ * The inline form takes a maximum and a window in minutes, so this allows three
+ * requests a minute per caller. The fourth answers 429 with a Retry-After header,
+ * and every permitted response carries X-RateLimit-Remaining.
+ */
+Route::get('/ping-limited', function (Request $request) {
+    return response()->json(['data' => true]);
+})->throttle(3, 1);
+
+/*
+ * The named form points at a limiter registered in a service provider; see
+ * Example\App\Providers\TestServiceProvider::boot(). Naming the limit keeps it in
+ * one place and lets it vary by caller.
+ */
+Route::get('/uploads', function (Request $request) {
+    return response()->json(['data' => 'uploaded']);
+})->middleware('throttle:uploads');
+
 Route::get('/ping/{name}', function (Request $request, string $name) {
 
     return response()->json([
@@ -69,4 +89,4 @@ Route::get('/check', function (Request $request) {
         'query' => $query,
         'cached' => Cache::get('sample'),
     ]);
-});
+})->throttle(5, 1);

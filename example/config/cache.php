@@ -17,6 +17,16 @@ return [
      */
     'default' => 'database',
 
+    /*
+     * The store the rate limiter counts in. Leave this null to reuse the
+     * default store above.
+     *
+     * Pointing the limiter somewhere of its own is useful when the default
+     * store is cleared often: flushing a page cache should not hand every
+     * caller a fresh allowance.
+     */
+    'limiter' => null,
+
     'stores' => [
         /*
          * Backed by the WordPress transient API.

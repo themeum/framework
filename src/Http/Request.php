@@ -21,10 +21,10 @@ use Framework\Http\Concerns\InteractsWithFiles;
 use Framework\Supports\Arr;
 use Framework\Validation\Validator;
 use WP_REST_Request;
-use Framework\Supports\Str;
 use InvalidArgumentException;
 
 use function Framework\app;
+use function Framework\config;
 use function Framework\message;
 use function Framework\user;
 use function Framework\value;
@@ -71,6 +71,15 @@ class Request implements RequestContract, Arrayable
      * @since 1.0.0
      */
     protected $headers;
+
+    /**
+     * The server parameters the request was built from.
+     *
+     * @var array
+     *
+     * @since 1.0.0
+     */
+    protected $server = [];
 
     /**
      * The cookies sent by the client.
@@ -299,6 +308,7 @@ class Request implements RequestContract, Arrayable
         $this->method = strtoupper($server['REQUEST_METHOD'] ?? 'GET');
         $this->route = $this->resolve_request_path($server);
         $this->headers = $this->extract_headers($server);
+        $this->server = $server;
         $this->route_params = $route_params;
         $this->cookies = $this->unslash_array($cookies);
         $this->files = [];
@@ -867,6 +877,182 @@ class Request implements RequestContract, Arrayable
         }
 
         return $this->attributes;
+    }
+
+    /**
+     * Get the client's network address.
+     *
+     * The connecting address is used by default. Addresses forwarded by an upstream proxy are only
+     * consulted when the connecting address is a configured trusted proxy, because a caller can
+     * otherwise set those headers freely: trusting them unconditionally would let one client
+     * present itself as an unlimited number of distinct callers, which would defeat anything built
+     * on top of this, rate limiting included.
+     *
+     * @return string|null
+     *
+     * @since 1.0.0
+     */
+    public function ip()
+    {
+        // phpcs:ignore Framework.NamingConventions.SnakeCaseVariable.NotSnakeCase
+        $server = !empty($this->server) ? $this->server : $_SERVER;
+        $remote = isset($server['REMOTE_ADDR']) ? trim((string) $server['REMOTE_ADDR']) : null;
+
+        if (empty($remote) || !$this->is_trusted_proxy($remote)) {
+            return $remote ?: null;
+        }
+
+        return $this->forwarded_ip($server) ?: $remote;
+    }
+
+    /**
+     * Get the identifier of the authenticated user, if there is one.
+     *
+     * @return int|null
+     *
+     * @since 1.0.0
+     */
+    public function user_id()
+    {
+        if (!function_exists('get_current_user_id')) {
+            return null;
+        }
+
+        $id = (int) get_current_user_id();
+
+        return $id > 0 ? $id : null;
+    }
+
+    /**
+     * Get the client address a trusted proxy forwarded.
+     *
+     * The leftmost entry of a forwarded chain is the original client. Entries that are themselves
+     * trusted proxies are skipped from the right, so a chain of known proxies resolves to the
+     * client rather than to the nearest hop. The leftmost entry is never skipped, because it is
+     * the client even when it looks like a proxy, which is what a wildcard trust list makes of
+     * every entry.
+     *
+     * @param array $server The server parameters.
+     *
+     * @return string|null
+     *
+     * @since 1.0.0
+     */
+    protected function forwarded_ip(array $server)
+    {
+        if (!empty($server['HTTP_CF_CONNECTING_IP'])) {
+            return trim((string) $server['HTTP_CF_CONNECTING_IP']);
+        }
+
+        if (empty($server['HTTP_X_FORWARDED_FOR'])) {
+            return null;
+        }
+
+        $chain = array_filter(array_map('trim', explode(',', (string) $server['HTTP_X_FORWARDED_FOR'])));
+
+        while (count($chain) > 1 && $this->is_trusted_proxy(end($chain))) {
+            array_pop($chain);
+        }
+
+        $client = end($chain);
+
+        return false === $client || '' === $client ? null : $client;
+    }
+
+    /**
+     * Determine whether an address is a configured trusted proxy.
+     *
+     * The default is to trust nothing, so forwarded headers are ignored until a site opts in.
+     *
+     * @param string $ip The address to test.
+     *
+     * @return bool
+     *
+     * @since 1.0.0
+     */
+    protected function is_trusted_proxy(string $ip)
+    {
+        $proxies = $this->trusted_proxies();
+
+        if (empty($proxies)) {
+            return false;
+        }
+
+        foreach ($proxies as $proxy) {
+            if ('*' === $proxy || $ip === $proxy) {
+                return true;
+            }
+
+            if (false !== strpos($proxy, '/') && $this->ip_in_range($ip, $proxy)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Get the proxies whose forwarded address headers may be believed.
+     *
+     * @return array
+     *
+     * @since 1.0.0
+     */
+    protected function trusted_proxies()
+    {
+        $proxies = config('app.trusted_proxies');
+
+        if (empty($proxies)) {
+            return [];
+        }
+
+        return is_array($proxies) ? $proxies : [$proxies];
+    }
+
+    /**
+     * Determine whether an address falls inside a CIDR range.
+     *
+     * Both address families are handled by comparing the leading bits of the packed addresses, so
+     * the same code covers IPv4 and IPv6.
+     *
+     * @param string $ip The address to test.
+     * @param string $range The range in CIDR notation.
+     *
+     * @return bool
+     *
+     * @since 1.0.0
+     */
+    protected function ip_in_range(string $ip, string $range)
+    {
+        [$subnet, $bits] = explode('/', $range, 2);
+
+        $address = @inet_pton($ip);
+        $network = @inet_pton($subnet);
+
+        if (false === $address || false === $network || strlen($address) !== strlen($network)) {
+            return false;
+        }
+
+        $bits = (int) $bits;
+
+        if ($bits < 0 || $bits > strlen($address) * 8) {
+            return false;
+        }
+
+        $whole = intdiv($bits, 8);
+        $remainder = $bits % 8;
+
+        if ($whole > 0 && strncmp($address, $network, $whole) !== 0) {
+            return false;
+        }
+
+        if (0 === $remainder) {
+            return true;
+        }
+
+        $mask = chr(0xFF << (8 - $remainder) & 0xFF);
+
+        return (($address[$whole] & $mask) === ($network[$whole] & $mask));
     }
 
     /**
