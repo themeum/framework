@@ -42,6 +42,32 @@ class RouteMiddlewareTest extends TestCase
         $this->assertSame(1, RouteMiddlewareTestCountingMiddleware::$handle_calls);
     }
 
+    public function test_permission_callback_called_twice_by_wordpress_runs_middleware_once(): void
+    {
+        $route = Route::get('ping', [RouteMiddlewareTestController::class, 'show'])
+            ->middleware([RouteMiddlewareTestCountingMiddleware::class]);
+
+        $rest_request = $this->make_rest_request();
+
+        $first = $this->invoke_route_method($route, 'resolve_permission_callback', $rest_request);
+        $second = $this->invoke_route_method($route, 'resolve_permission_callback', $rest_request);
+
+        $this->assertTrue($first);
+        $this->assertTrue($second);
+        $this->assertSame(1, RouteMiddlewareTestCountingMiddleware::$handle_calls);
+    }
+
+    public function test_permission_callback_reruns_for_a_different_request(): void
+    {
+        $route = Route::get('ping', [RouteMiddlewareTestController::class, 'show'])
+            ->middleware([RouteMiddlewareTestCountingMiddleware::class]);
+
+        $this->invoke_route_method($route, 'resolve_permission_callback', $this->make_rest_request());
+        $this->invoke_route_method($route, 'resolve_permission_callback', $this->make_rest_request());
+
+        $this->assertSame(2, RouteMiddlewareTestCountingMiddleware::$handle_calls);
+    }
+
     public function test_permission_failure_returns_wp_error(): void
     {
         $route = Route::get('ping', [RouteMiddlewareTestController::class, 'show'])

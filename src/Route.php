@@ -242,6 +242,29 @@ class Route
     protected $resolved_request;
 
     /**
+     * The REST request the cached permission verdict below belongs to.
+     *
+     * WordPress core re-invokes a matched route's permission_callback a second time for the same
+     * request object when it builds the Allow response header (rest_send_allow_header(), hooked on
+     * rest_post_dispatch), independently of whether the request succeeded. Middleware with a side
+     * effect, such as the rate limiter, would otherwise be charged twice for one client request.
+     *
+     * @var WP_REST_Request|null
+     *
+     * @since 1.0.0
+     */
+    protected $permission_checked_request;
+
+    /**
+     * The permission verdict cached for permission_checked_request above.
+     *
+     * @var bool|WP_Error|null
+     *
+     * @since 1.0.0
+     */
+    protected $permission_result;
+
+    /**
      * Whether routes are being registered inside Route::site().
      *
      * @var bool
@@ -2019,6 +2042,11 @@ class Route
     /**
      * Resolve the permission callback for the route.
      *
+     * Memoized per request object: WordPress core calls this a second time for the same request
+     * when it computes the Allow response header, and re-running middleware for that second call
+     * would charge any middleware with a side effect, such as the rate limiter, twice for what the
+     * client experiences as a single request.
+     *
      * @param WP_REST_Request $rest_request The REST request object.
      *
      * @return bool|WP_Error
@@ -2026,6 +2054,29 @@ class Route
      * @since 1.0.0
      */
     protected function resolve_permission_callback($rest_request)
+    {
+        if ($this->permission_checked_request === $rest_request) {
+            return $this->permission_result;
+        }
+
+        $result = $this->compute_permission_result($rest_request);
+
+        $this->permission_checked_request = $rest_request;
+        $this->permission_result = $result;
+
+        return $result;
+    }
+
+    /**
+     * Run the route's middleware pipeline and compute the permission verdict.
+     *
+     * @param WP_REST_Request $rest_request The REST request object.
+     *
+     * @return bool|WP_Error
+     *
+     * @since 1.0.0
+     */
+    protected function compute_permission_result($rest_request)
     {
         $request = $this->make_framework_request($rest_request);
 

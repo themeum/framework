@@ -40,7 +40,7 @@ Route::set_namespace('framework/v1');
  */
 Route::get('/ping-limited', function (Request $request) {
     return response()->json(['data' => true]);
-})->throttle(3, 1);
+})->throttle(5, 1);
 
 /*
  * The named form points at a limiter registered in a service provider; see
