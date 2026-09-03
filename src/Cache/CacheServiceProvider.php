@@ -12,6 +12,7 @@ namespace Framework\Cache;
 
 defined('ABSPATH') || exit;
 
+use Framework\Cache\Locks\DatabaseLock;
 use Framework\ServiceProvider;
 use Throwable;
 
@@ -64,7 +65,12 @@ class CacheServiceProvider extends ServiceProvider
 
         add_action($hook, function () {
             try {
-                $this->app->make(CacheManager::class)->collect_garbage();
+                $manager = $this->app->make(CacheManager::class);
+                $manager->collect_garbage();
+
+                if (!$manager->uses_external_object_cache()) {
+                    DatabaseLock::gc($manager->store()->get_prefix());
+                }
             } catch (Throwable $exception) {
                 // A sweep that cannot run must never fail the request that triggered it.
             }

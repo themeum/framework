@@ -22,6 +22,8 @@ use Framework\Console\Commands\MakeClassCommand;
 use Framework\Console\Commands\MakeControllerCommand;
 use Framework\Cache\CacheManager;
 use Framework\Cache\CacheServiceProvider;
+use Framework\RateLimiting\RateLimiter;
+use Framework\RateLimiting\RateLimiterServiceProvider;
 use Framework\Console\Commands\ClearCacheCommand;
 use Framework\Console\Commands\ForgetCacheCommand;
 use Framework\Console\Commands\GcCacheCommand;
@@ -289,6 +291,7 @@ class Application extends Container
     {
         $this->register(new FileSystemServiceProvider($this));
         $this->register(new CacheServiceProvider($this));
+        $this->register(new RateLimiterServiceProvider($this));
         $this->register(new CoreServiceProvider($this));
         $this->register(new HookServiceProvider($this));
     }
@@ -337,6 +340,7 @@ class Application extends Container
         foreach (
             [
                 'cache' => CacheManager::class,
+                'limiter' => RateLimiter::class,
                 'db' => DatabaseManager::class,
                 'schema' => SchemaManager::class,
                 'option' => OptionManager::class,

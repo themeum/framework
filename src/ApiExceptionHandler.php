@@ -11,6 +11,7 @@ namespace Framework;
 
 defined('ABSPATH') || exit;
 
+use Framework\Exceptions\HttpException;
 use Framework\Exceptions\ModelNotFoundException;
 use Framework\Exceptions\ValidationException;
 use Framework\Http\Response;
@@ -38,6 +39,19 @@ class ApiExceptionHandler
             ];
 
             return response()->json($response, Response::UNPROCESSABLE_ENTITY);
+        }
+
+        if ($exception instanceof HttpException) {
+            $response = $exception->get_payload();
+
+            if (is_null($response)) {
+                $response = [
+                    'message' => $exception->getMessage(),
+                    'code' => $exception->error_code(),
+                ];
+            }
+
+            return response()->json($response, $exception->get_status(), $exception->get_headers());
         }
 
         if ($exception instanceof ModelNotFoundException) {

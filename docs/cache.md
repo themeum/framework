@@ -18,6 +18,7 @@ This guide covers storing and retrieving values with a lifetime, across three st
 12. [Multisite](#12-multisite)
 13. [Where this differs from Laravel](#13-where-this-differs-from-laravel)
 14. [CLI reference](#14-cli-reference)
+15. [Locks](#15-locks)
 
 ---
 
@@ -321,7 +322,7 @@ Four deliberate divergences, each forced by WordPress:
 
 **`flush()` advances a namespace version.** Necessary because transients cannot be enumerated under an object cache. The practical effect is the same — every prior key reads as a miss — and it takes constant time. Reclaiming the rows a version leaves behind happens later, off the request that called `flush()`, in the same scheduled sweep described in [section 9](#9-the-drivers).
 
-Also absent by design: `Cache::lock()` and everything derived from it (`funnel`, `without_overlapping`, `flush_locks`), tagged cache (`supports_tags()` returns `false`), the `failover` driver, `sear`, and `rememberWithWarmth`.
+`Cache::lock()` **does** exist — see [section 15](#15-locks) — though only the acquire, release and callback forms; `block()`, `funnel()` and `without_overlapping()` do not. Absent by design: tagged cache (`supports_tags()` returns `false`), the `failover` driver, `sear`, and `rememberWithWarmth`.
 
 ---
 
@@ -336,3 +337,62 @@ wp cache:gc
 ```
 
 Keys are stored under a derived identifier rather than their literal name, so `wp transient delete` cannot target them. `cache:forget` is the supported way to invalidate a single entry from outside the application.
+
+---
+
+## 15. Locks
+
+`Cache::lock()` hands out a named lock that at most one caller holds at a time. It exists because
+counting things correctly under concurrent requests needs a mutual exclusion primitive, and
+`increment()` and `add()` do not provide one.
+
+```php
+use Framework\Supports\Facades\Cache;
+
+$lock = Cache::lock('import-products', 30);
+
+if ($lock->get()) {
+    try {
+        // Only one request runs this at a time.
+    } finally {
+        $lock->release();
+    }
+}
+```
+
+The callback form does the same and releases for you, including when the callback raises:
+
+```php
+$result = Cache::lock('import-products', 30)->get(function () {
+    return run_the_import();
+});
+```
+
+`get()` returns `false` without running the callback when the lock is held elsewhere.
+
+**Acquisition never blocks.** There is no `block()` that waits for a holder to finish. A blocking
+wait would hold a PHP-FPM worker for its duration, so heavy contention would exhaust the worker
+pool — the lock becoming the outage. A caller that loses the race is told immediately and decides
+what to do.
+
+**The lifetime is mandatory.** The second argument is how long the lock survives if it is never
+released. A request killed by a timeout while holding a lock would otherwise block that key
+permanently; instead the lock expires and the next caller takes it. Choose a lifetime comfortably
+longer than the work it guards.
+
+**Only the holder can release.** Each acquisition carries a random owner token, and `release()`
+only takes effect while that token is still the one stored. A caller whose lock already expired
+and was taken by someone else cannot release the new holder's lock.
+
+**Both backends are atomic**, so a lock behaves the same on any site:
+
+| Backend | Used when | Atomic through |
+| --- | --- | --- |
+| Object cache | a persistent object cache drop-in is present | `wp_cache_add()`, a native atomic add on Redis and Memcached |
+| Options table | otherwise | `INSERT IGNORE`, atomic through the unique index on `option_name` |
+
+The options-table backend is the mechanism WordPress core uses for its own locking in
+`WP_Upgrader::create_lock()`. Its rows are written with `autoload = 'no'` and are read and written
+as raw statements through the `DB` facade rather than the options API, because the options cache in
+front of that API would defeat the atomicity the lock depends on. Expired rows are reclaimed by the same
+scheduled sweep described in [section 9](#9-the-drivers).

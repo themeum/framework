@@ -27,6 +27,8 @@ use Framework\Facade;
  * @method static string get_default_store()
  * @method static array store_config(string $name)
  * @method static int collect_garbage(string|null $name = null)
+ * @method static \Framework\Contracts\Lock lock(string $name, int $seconds = 60, string|null $owner = null)
+ * @method static bool uses_external_object_cache()
  * @method static array sweepable_stores()
  * @method static mixed get(string $key, $default = null)
  * @method static array many(array $keys)

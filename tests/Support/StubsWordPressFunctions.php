@@ -156,6 +156,8 @@ if (!function_exists('flush_rewrite_rules')) {
 if (!function_exists('status_header')) {
     function status_header($code)
     {
+        $GLOBALS['framework_test_status_header'] = (int) $code;
+
         return true;
     }
 }
@@ -783,5 +785,26 @@ if (!function_exists('wp_upload_dir')) {
     function wp_upload_dir()
     {
         return ['basedir' => $GLOBALS['framework_test_upload_dir'] ?? sys_get_temp_dir()];
+    }
+}
+
+if (!function_exists('get_current_user_id')) {
+    function get_current_user_id()
+    {
+        return (int) ($GLOBALS['framework_test_current_user_id'] ?? 0);
+    }
+}
+
+if (!function_exists('wp_generate_password')) {
+    function wp_generate_password($length = 12, $special_chars = true, $extra_special_chars = false)
+    {
+        $alphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        $password = '';
+
+        for ($index = 0; $index < $length; $index++) {
+            $password .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+        }
+
+        return $password;
     }
 }
