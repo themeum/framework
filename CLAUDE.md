@@ -413,5 +413,5 @@ behaviour is worse than no doc.
 
 ## 7. Commits
 
-Don't commit or push unless I ask. When I do ask, and I'm on `main`, branch
-first.
+Don't commit or push unless I ask. When I do ask commit the changes with a inferred
+commit message that is good enough for PR title and description and also push on behalf of me.
