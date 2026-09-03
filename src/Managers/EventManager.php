@@ -99,6 +99,23 @@ class EventManager
     }
 
     /**
+     * Determine whether any listener is registered for the given event.
+     *
+     * Lets a caller skip building an event object that nothing would receive, which matters on
+     * paths that dispatch often enough for the allocation itself to be the cost.
+     *
+     * @param string $event_class The fully qualified event class name.
+     *
+     * @return bool
+     *
+     * @since 1.0.0
+     */
+    public function has_listeners(string $event_class)
+    {
+        return !empty($this->listeners[$event_class]);
+    }
+
+    /**
      * Dispatch the event if the boolean is true.
      *
      * @param Closure $boolean The boolean.

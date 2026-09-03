@@ -20,6 +20,11 @@ use Framework\Console\CommandManager;
 use Framework\Console\Commands\FreshCommand;
 use Framework\Console\Commands\MakeClassCommand;
 use Framework\Console\Commands\MakeControllerCommand;
+use Framework\Cache\CacheManager;
+use Framework\Cache\CacheServiceProvider;
+use Framework\Console\Commands\ClearCacheCommand;
+use Framework\Console\Commands\ForgetCacheCommand;
+use Framework\Console\Commands\GcCacheCommand;
 use Framework\Console\Commands\MakeMigrationCommand;
 use Framework\Console\Commands\MakeModelCommand;
 use Framework\Console\Commands\MakeProviderCommand;
@@ -283,6 +288,7 @@ class Application extends Container
     protected function register_base_service_providers()
     {
         $this->register(new FileSystemServiceProvider($this));
+        $this->register(new CacheServiceProvider($this));
         $this->register(new CoreServiceProvider($this));
         $this->register(new HookServiceProvider($this));
     }
@@ -309,6 +315,9 @@ class Application extends Container
             'migrate:status' => StatusCommand::class,
             'make:provider' => MakeProviderCommand::class,
             'make:class' => MakeClassCommand::class,
+            'cache:clear' => ClearCacheCommand::class,
+            'cache:forget' => ForgetCacheCommand::class,
+            'cache:gc' => GcCacheCommand::class,
         ];
 
         foreach ($commands as $command => $class) {
@@ -327,6 +336,7 @@ class Application extends Container
     {
         foreach (
             [
+                'cache' => CacheManager::class,
                 'db' => DatabaseManager::class,
                 'schema' => SchemaManager::class,
                 'option' => OptionManager::class,

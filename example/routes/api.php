@@ -15,6 +15,7 @@ use Framework\Middlewares\AuthMiddleware;
 use Framework\Resource;
 use Framework\Route;
 use Framework\Supports\Arr;
+use Framework\Supports\Facades\Cache;
 use Framework\Supports\Facades\Cookie;
 use Framework\Supports\Facades\DB;
 use Framework\Supports\Facades\Http;
@@ -58,11 +59,14 @@ Route::get('/options', function (Request $request) {
 });
 
 Route::get('/check', function (Request $request) {
+    Cache::forget('sample');
+
     DB::enable_query_log();
     $blog = Blog::query()->find(1);
     $query = DB::get_query_log();
     return response()->json([
         'data' => $blog,
         'query' => $query,
+        'cached' => Cache::get('sample'),
     ]);
 });

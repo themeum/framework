@@ -17,7 +17,24 @@ if (!function_exists('_e')) {
 if (!function_exists('add_action')) {
     function add_action($hook_name, $callback, $priority = 10, $accepted_args = 1)
     {
+        $GLOBALS['framework_test_actions'][$hook_name][] = $callback;
+
         return true;
+    }
+}
+
+if (!function_exists('framework_test_do_action')) {
+    function framework_test_do_action($hook_name)
+    {
+        $callbacks = $GLOBALS['framework_test_actions'][$hook_name] ?? [];
+
+        $GLOBALS['framework_test_actions'][$hook_name] = [];
+
+        foreach ($callbacks as $callback) {
+            $callback();
+        }
+
+        return count($callbacks);
     }
 }
 
@@ -552,6 +569,86 @@ if (!function_exists('wp_using_ext_object_cache')) {
     }
 }
 
+if (!function_exists('wp_cache_get')) {
+    function wp_cache_get($key, $group = '')
+    {
+        $store = $GLOBALS['framework_test_object_cache'][$group] ?? [];
+
+        return array_key_exists($key, $store) ? $store[$key] : false;
+    }
+}
+
+if (!function_exists('wp_cache_set')) {
+    function wp_cache_set($key, $value, $group = '', $expire = 0)
+    {
+        $GLOBALS['framework_test_object_cache'][$group][$key] = $value;
+
+        return true;
+    }
+}
+
+if (!function_exists('wp_cache_add')) {
+    function wp_cache_add($key, $value, $group = '', $expire = 0)
+    {
+        if (array_key_exists($key, $GLOBALS['framework_test_object_cache'][$group] ?? [])) {
+            return false;
+        }
+
+        $GLOBALS['framework_test_object_cache'][$group][$key] = $value;
+
+        return true;
+    }
+}
+
+if (!function_exists('wp_cache_delete')) {
+    function wp_cache_delete($key, $group = '')
+    {
+        if (!isset($GLOBALS['framework_test_object_cache'][$group][$key])) {
+            return false;
+        }
+
+        unset($GLOBALS['framework_test_object_cache'][$group][$key]);
+
+        return true;
+    }
+}
+
+if (!function_exists('wp_cache_incr')) {
+    function wp_cache_incr($key, $offset = 1, $group = '')
+    {
+        if (!array_key_exists($key, $GLOBALS['framework_test_object_cache'][$group] ?? [])) {
+            return false;
+        }
+
+        $value = (int) $GLOBALS['framework_test_object_cache'][$group][$key] + (int) $offset;
+
+        $GLOBALS['framework_test_object_cache'][$group][$key] = $value;
+
+        return $value;
+    }
+}
+
+if (!function_exists('wp_cache_decr')) {
+    function wp_cache_decr($key, $offset = 1, $group = '')
+    {
+        return wp_cache_incr($key, $offset * -1, $group);
+    }
+}
+
+if (!function_exists('is_multisite')) {
+    function is_multisite()
+    {
+        return (bool) ($GLOBALS['framework_test_multisite'] ?? false);
+    }
+}
+
+if (!function_exists('get_current_network_id')) {
+    function get_current_network_id()
+    {
+        return (int) ($GLOBALS['framework_test_network_id'] ?? 1);
+    }
+}
+
 if (!function_exists('wp_get_referer')) {
     function wp_get_referer()
     {
@@ -570,5 +667,121 @@ if (!function_exists('wp_generate_password')) {
         }
 
         return $password;
+    }
+}
+
+if (!function_exists('wp_salt')) {
+    function wp_salt($scheme = 'auth')
+    {
+        return $GLOBALS['framework_test_salt'] ?? 'framework-test-salt';
+    }
+}
+
+if (!function_exists('get_current_blog_id')) {
+    function get_current_blog_id()
+    {
+        return (int) ($GLOBALS['framework_test_blog_id'] ?? 1);
+    }
+}
+
+if (!function_exists('get_option')) {
+    function get_option($name, $default = false)
+    {
+        $store = $GLOBALS['framework_test_options'] ?? [];
+
+        return array_key_exists($name, $store) ? $store[$name] : $default;
+    }
+}
+
+if (!function_exists('update_option')) {
+    function update_option($name, $value, $autoload = null)
+    {
+        if (!isset($GLOBALS['framework_test_options'])) {
+            $GLOBALS['framework_test_options'] = [];
+        }
+
+        $GLOBALS['framework_test_options'][$name] = $value;
+
+        return true;
+    }
+}
+
+if (!function_exists('get_site_option')) {
+    function get_site_option($name, $default = false)
+    {
+        $store = $GLOBALS['framework_test_site_options'] ?? [];
+
+        return array_key_exists($name, $store) ? $store[$name] : $default;
+    }
+}
+
+if (!function_exists('update_site_option')) {
+    function update_site_option($name, $value)
+    {
+        if (!isset($GLOBALS['framework_test_site_options'])) {
+            $GLOBALS['framework_test_site_options'] = [];
+        }
+
+        $GLOBALS['framework_test_site_options'][$name] = $value;
+
+        return true;
+    }
+}
+
+if (!function_exists('get_site_transient')) {
+    function get_site_transient($key)
+    {
+        $store = $GLOBALS['framework_test_site_transients'] ?? [];
+
+        if (!array_key_exists($key, $store)) {
+            return false;
+        }
+
+        $entry = $store[$key];
+
+        if (isset($entry['expires_at']) && $entry['expires_at'] !== 0 && $entry['expires_at'] <= time()) {
+            unset($GLOBALS['framework_test_site_transients'][$key]);
+
+            return false;
+        }
+
+        return $entry['value'];
+    }
+}
+
+if (!function_exists('set_site_transient')) {
+    function set_site_transient($key, $value, $expiration = 0)
+    {
+        if (!isset($GLOBALS['framework_test_site_transients'])) {
+            $GLOBALS['framework_test_site_transients'] = [];
+        }
+
+        $GLOBALS['framework_test_site_transients'][$key] = [
+            'value' => $value,
+            'lifetime' => (int) $expiration,
+            'expires_at' => $expiration ? time() + (int) $expiration : 0,
+        ];
+
+        return true;
+    }
+}
+
+if (!function_exists('delete_site_transient')) {
+    function delete_site_transient($key)
+    {
+        if (!isset($GLOBALS['framework_test_site_transients'][$key])) {
+            return false;
+        }
+
+        unset($GLOBALS['framework_test_site_transients'][$key]);
+
+        return true;
+    }
+}
+
+if (!function_exists('wp_upload_dir')) {
+    function wp_upload_dir()
+    {
+        return ['basedir' => $GLOBALS['framework_test_upload_dir'] ?? sys_get_temp_dir()];
     }
 }

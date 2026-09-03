@@ -15,6 +15,7 @@ use Closure;
 use Faker\Factory;
 use Faker\Generator;
 use Framework\Application;
+use Framework\Cache\CacheManager;
 use Framework\Collections\Collection;
 use Framework\Database\Migrations\Migrator;
 use Framework\Http\Cookie;
@@ -335,6 +336,36 @@ if (!function_exists('Framework\session')) {
             $manager->put($key);
 
             return null;
+        }
+
+        return $manager->get($key, $default);
+    }
+}
+
+if (!function_exists('Framework\cache')) {
+    /**
+     * Access the cache.
+     *
+     * With no arguments the manager is returned. A string key reads a value, and an array
+     * writes each key and value pair using the second argument as the time to live.
+     *
+     * @param string|array|null $key
+     * @param mixed $default The default on a read, or the time to live on a write.
+     *
+     * @return ($key is null ? CacheManager : ($key is array ? bool : mixed))
+     *
+     * @since 1.0.0
+     */
+    function cache($key = null, $default = null)
+    {
+        $manager = app('cache');
+
+        if (is_null($key)) {
+            return $manager;
+        }
+
+        if (is_array($key)) {
+            return $manager->put_many($key, $default);
         }
 
         return $manager->get($key, $default);

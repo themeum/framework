@@ -22,6 +22,10 @@ namespace {
     if (!defined('ARRAY_A')) {
         define('ARRAY_A', 1);
     }
+
+    if (!defined('YEAR_IN_SECONDS')) {
+        define('YEAR_IN_SECONDS', 365 * 24 * 60 * 60);
+    }
 }
 
 namespace {
