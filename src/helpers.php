@@ -479,6 +479,65 @@ if (!function_exists('Framework\include_view')) {
     }
 }
 
+if (!function_exists('Framework\start_section')) {
+    /**
+     * Begin capturing a named section for a master layout.
+     *
+     * @param string $name Section name.
+     *
+     * @return void
+     *
+     * @since 2.2.0
+     * @throws \RuntimeException When a section is already being captured.
+     */
+    function start_section(string $name)
+    {
+        app(\Framework\View\SectionManager::class)->start($name);
+    }
+}
+
+if (!function_exists('Framework\end_section')) {
+    /**
+     * End the current section capture.
+     *
+     * @return void
+     *
+     * @since 2.2.0
+     * @throws \RuntimeException When no section is being captured.
+     */
+    function end_section()
+    {
+        app(\Framework\View\SectionManager::class)->end();
+    }
+}
+
+if (!function_exists('Framework\render_section')) {
+    /**
+     * Render a named section in a master layout template.
+     *
+     * Echoes the captured section content, or the default value
+     * if the section was not defined by the child template.
+     *
+     * @param string $name    Section name.
+     * @param string $default Fallback content when the section was not defined.
+     *
+     * @return void
+     *
+     * @since 2.2.0
+     */
+    function render_section(string $name, string $default = '')
+    {
+        $content = app(\Framework\View\SectionManager::class)->get($name, $default);
+
+        if ($content === '') {
+            return;
+        }
+
+        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Section content is trusted template HTML; dynamic values are escaped within the templates.
+        echo $content;
+    }
+}
+
 if (!function_exists('Framework\redirect')) {
     /**
      * Create a redirect response.

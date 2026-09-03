@@ -33,9 +33,13 @@ class View
     protected $data = [];
 
     /**
-     * Whether to wrap the view in the theme layout.
+     * Layout wrapping mode for this view.
      *
-     * @var bool
+     * - true:   Wrap with the standard theme header/footer.
+     * - false:  No theme wrapping (partial).
+     * - string: Wrap with the specified custom master layout template.
+     *
+     * @var bool|string
      *
      * @since 1.0.0
      */
@@ -74,15 +78,19 @@ class View
     /**
      * Enable or set layout wrapping for this view.
      *
-     * @param bool $enabled Whether layout wrapping is enabled.
+     * Pass `true` for standard theme wrapping, `false` to disable,
+     * or a template name string (e.g. 'site.account.master') for
+     * a custom master layout.
+     *
+     * @param bool|string $layout Layout mode or master template name.
      *
      * @return $this
      *
      * @since 1.0.0
      */
-    public function layout($enabled = true)
+    public function layout($layout = true)
     {
-        $this->with_layout = (bool) $enabled;
+        $this->with_layout = is_string($layout) ? $layout : (bool) $layout;
 
         return $this;
     }
@@ -130,13 +138,30 @@ class View
     /**
      * Whether the view uses layout wrapping.
      *
+     * Returns true for both standard theme layout (true) and
+     * custom master layout (string). Returns false only when
+     * layout is explicitly disabled.
+     *
      * @return bool
      *
      * @since 1.0.0
      */
     public function uses_layout()
     {
-        return $this->with_layout;
+        return $this->with_layout !== false;
+    }
+
+    /**
+     * Get the master layout template name, if set.
+     *
+     * @return string|null Template name in dot notation, or null when
+     *                     using standard theme layout or no layout.
+     *
+     * @since 2.2.0
+     */
+    public function get_master_layout()
+    {
+        return is_string($this->with_layout) ? $this->with_layout : null;
     }
 
     /**

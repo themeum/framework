@@ -74,15 +74,17 @@ class TemplateEngine
     /**
      * Render a view template to a string.
      *
-     * @param string $view The view name in dot notation.
-     * @param array $data The data to pass to the view.
-     * @param bool $layout Whether to wrap with theme header/footer.
+     * @param string      $view   The view name in dot notation.
+     * @param array       $data   The data to pass to the view.
+     * @param bool|string $layout Layout mode: true for theme wrapping,
+     *                            false for no wrapping, or a master
+     *                            layout template name.
      *
      * @return string
      *
      * @since 1.0.0
      */
-    public function render(string $view, array $data = [], bool $layout = true)
+    public function render(string $view, array $data = [], $layout = true)
     {
         $path = $this->resolve_path($view);
 
@@ -100,6 +102,10 @@ class TemplateEngine
         ]);
 
         try {
+            if (is_string($layout)) {
+                return $this->render_with_master_layout($path, $layout);
+            }
+
             $content = $this->render_file($path);
 
             if (!$layout) {
@@ -110,6 +116,46 @@ class TemplateEngine
         } finally {
             $context->pop();
         }
+    }
+
+    /**
+     * Render a child template within a master layout.
+     *
+     * The child template is executed first, populating sections via
+     * SectionManager. Then the master layout is rendered, yielding
+     * those sections with render_section().
+     *
+     * @param string $child_path  Absolute path to the child template.
+     * @param string $master_view Master layout template name in dot notation.
+     *
+     * @return string
+     *
+     * @throws RuntimeException When the master layout cannot be resolved.
+     *
+     * @since 2.2.0
+     */
+    protected function render_with_master_layout(string $child_path, string $master_view)
+    {
+        $master_path = $this->resolve_path($master_view);
+
+        if ($master_path === '') {
+            throw new RuntimeException(sprintf('Master layout [%s] not found.', $master_view));
+        }
+
+        $sections = app(SectionManager::class);
+        $sections->clear();
+
+        // Render the child template – its start_section() / end_section()
+        // calls populate the SectionManager.
+        $this->render_file($child_path);
+
+        // Render the master layout, which calls render_section() to yield
+        // the captured sections.
+        $output = $this->render_file($master_path);
+
+        $sections->clear();
+
+        return $output;
     }
 
     /**

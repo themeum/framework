@@ -158,6 +158,25 @@ class ViewContext
     }
 
     /**
+     * Set an attribute on the topmost context frame.
+     *
+     * @param string $key   Attribute key.
+     * @param mixed  $value Attribute value.
+     *
+     * @return void
+     *
+     * @since 2.2.0
+     */
+    public function set_active_attribute(string $key, $value)
+    {
+        if ($this->stack === []) {
+            return;
+        }
+
+        $this->stack[count($this->stack) - 1][$key] = $value;
+    }
+
+    /**
      * Find the innermost stack frame that authorizes the current caller.
      *
      * @return array|null
