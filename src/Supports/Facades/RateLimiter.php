@@ -7,6 +7,15 @@
  * @package    Framework
  * @subpackage Supports
  * @since      1.0.0
+*/
+namespace Framework\Supports\Facades;
+
+defined('ABSPATH') || exit;
+
+use Framework\Facade;
+
+/**
+ * The rate limiter class
  *
  * phpcs:disable Generic.Files.LineLength.TooLong
  *
@@ -26,13 +35,7 @@
  * @method static \Framework\Cache\Repository cache()
  *
  * phpcs:enable Generic.Files.LineLength.TooLong
- */
-namespace Framework\Supports\Facades;
-
-defined('ABSPATH') || exit;
-
-use Framework\Facade;
-
+*/
 class RateLimiter extends Facade
 {
     /**
