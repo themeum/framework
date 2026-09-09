@@ -173,7 +173,7 @@ class MessagesBag
             ],
             'upload' => [
                 'directory_unavailable' => 'Upload directory is not available.',
-                'move_failed' => 'Could not move the file "%s" to "%s" (%s).',
+                'move_failed' => 'Could not move the file "%s" to "%s".',
                 'ini_size_exceeded' => 'The file "%s" exceeds your upload_max_filesize ini directive (limit is %d KiB).',
                 'form_size_exceeded' => 'The file "%s" exceeds the upload limit defined in your form.',
                 'partial' => 'The file "%s" was only partially uploaded.',

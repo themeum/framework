@@ -70,6 +70,24 @@ class SuperglobalsTest extends TestCase
         $_POST = [];
     }
 
+    public function test_array_typed_single_key_read_returns_the_array(): void
+    {
+        $_GET = ['cat_ids' => ['1', '2']];
+
+        $this->assertSame(['1', '2'], Superglobals::query('cat_ids', [], Sanitizer::ARRAY));
+
+        $_GET = [];
+    }
+
+    public function test_array_value_is_still_rejected_when_a_non_array_type_is_requested(): void
+    {
+        $_GET = ['cat_ids' => ['1', '2']];
+
+        $this->assertSame('fallback', Superglobals::query('cat_ids', 'fallback', Sanitizer::INT));
+
+        $_GET = [];
+    }
+
     public function test_files_returns_unslashed_whole_array(): void
     {
         $_FILES = ['upload' => ['name' => "photo\\'s.png", 'error' => 0]];

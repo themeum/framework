@@ -13,6 +13,7 @@ namespace Framework\Filesystem;
 defined('ABSPATH') || exit;
 
 use Exception;
+use Framework\Container;
 use InvalidArgumentException;
 use SplFileInfo;
 
@@ -61,29 +62,17 @@ class File extends SplFileInfo
     {
         $target = $this->get_target_file($directory, $name);
 
-        // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Captures a PHP warning from rename()/move_uploaded_file() into a catchable value; restored in the finally block immediately after.
-        set_error_handler(static function ($type, $msg) use (&$error) {
-            $error = $msg;
-        });
+        $filesystem = Container::get_instance()->make(Filesystem::class);
 
-        try {
-            $renamed = rename($this->getPathname(), $target);
-        } finally {
-            restore_error_handler();
-        }
+        $renamed = $filesystem->move($this->getPathname(), $target);
 
         throw_unless(
             $renamed,
-            sprintf(
-                'Could not move the file "%s" to "%s" (%s).',
-                $this->getPathname(),
-                $target,
-                wp_strip_all_tags($error ?? '')
-            ),
+            sprintf('Could not move the file "%s" to "%s".', $this->getPathname(), $target),
             Exception::class
         );
 
-        @chmod($target, 0666 & ~umask());
+        $filesystem->chmod($target, 0666 & ~umask());
 
         return $target;
     }
@@ -120,7 +109,7 @@ class File extends SplFileInfo
      */
     protected function get_target_file(string $directory, ?string $name = null)
     {
-        if (!is_dir($directory) && !@mkdir($directory, 0777, true) && !is_dir($directory)) {
+        if (!is_dir($directory) && !wp_mkdir_p($directory) && !is_dir($directory)) {
             throw_if(
                 is_file($directory),
                 sprintf('Unable to create the "%s" directory. A similar named file exists.', $directory),
@@ -128,7 +117,7 @@ class File extends SplFileInfo
             );
 
             throw_anyway(sprintf('Unable to create the "%s" directory.', $directory));
-        } elseif (!is_writable($directory)) {
+        } elseif (!wp_is_writable($directory)) {
             throw_anyway(sprintf('Unable to write in the "%s" directory.', $directory));
         }
 

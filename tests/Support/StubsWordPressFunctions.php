@@ -822,3 +822,39 @@ if (!function_exists('wp_generate_password')) {
         return $password;
     }
 }
+
+if (!function_exists('wp_mkdir_p')) {
+    function wp_mkdir_p($target)
+    {
+        return is_dir($target) || @mkdir($target, 0777, true);
+    }
+}
+
+if (!function_exists('wp_is_writable')) {
+    function wp_is_writable($path)
+    {
+        if (in_array($path, $GLOBALS['framework_test_unwritable_paths'] ?? [], true)) {
+            return false;
+        }
+
+        return is_writable($path);
+    }
+}
+
+if (!function_exists('current_user_can')) {
+    function current_user_can($capability)
+    {
+        return $GLOBALS['framework_test_user_can'][$capability] ?? true;
+    }
+}
+
+if (!function_exists('sanitize_file_name')) {
+    function sanitize_file_name($filename)
+    {
+        $special_chars = ['?', '[', ']', '/', '\\', '=', '<', '>', ':', ';', ',', "'", '"', '&', '$', '#', '*', '(', ')', '|', '~', '`', '!', '{', '}', '%', '+'];
+        $filename = str_replace($special_chars, '', $filename);
+        $filename = preg_replace('/\s+/', '-', trim($filename));
+
+        return trim($filename, '.-_');
+    }
+}

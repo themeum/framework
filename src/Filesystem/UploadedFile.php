@@ -262,29 +262,17 @@ class UploadedFile extends File implements JsonSerializable
         if ($this->is_valid()) {
             $target = $this->get_target_file($directory, $name);
 
-            // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Captures a PHP warning from rename()/move_uploaded_file() into a catchable value; restored in the finally block immediately after.
-            set_error_handler(static function ($type, $msg) use (&$error) {
-                $error = $msg;
-            });
+            $filesystem = Container::get_instance()->make(Filesystem::class);
 
-            try {
-                $moved = move_uploaded_file($this->getPathname(), $target);
-            } finally {
-                restore_error_handler();
-            }
+            $moved = $filesystem->move($this->getPathname(), $target);
 
             throw_unless(
                 $moved,
-                message(
-                    'upload.move_failed',
-                    $this->getPathname(),
-                    $target,
-                    wp_strip_all_tags($error ?? '')
-                ),
+                message('upload.move_failed', $this->getPathname(), $target),
                 Exception::class
             );
 
-            @chmod($target, 0666 & ~umask());
+            $filesystem->chmod($target, 0666 & ~umask());
 
             return $target;
         }

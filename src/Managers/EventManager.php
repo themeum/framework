@@ -165,6 +165,7 @@ class EventManager
     {
         throw_unless(is_subclass_of($listener, Listener::class), sprintf(
             'The listener [%s] must be a subclass of [%s]',
+            $listener,
             Listener::class
         ), InvalidArgumentException::class);
 

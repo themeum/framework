@@ -104,6 +104,15 @@ class TestFilesystem extends Filesystem
         return rename($path, $target);
     }
 
+    public function chmod($path, $mode = null)
+    {
+        if ($mode) {
+            return chmod($path, $mode);
+        }
+
+        return substr(sprintf('%o', fileperms($path)), -4);
+    }
+
     public function delete($paths, bool $recursive = true)
     {
         $paths = is_array($paths) ? $paths : [$paths];

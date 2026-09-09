@@ -127,7 +127,9 @@ class Superglobals
 
         // A single-key read expects a scalar; an unexpected array (e.g. a crafted
         // "name[]=x" request) is treated as absent rather than stringified by Sanitizer.
-        if (!is_scalar($value)) {
+        // The array sanitization type is the deliberate exception: an array value is
+        // exactly what it expects, and Sanitizer::apply_rule() already handles it.
+        if (!is_scalar($value) && $type !== Sanitizer::ARRAY) {
             return $default;
         }
 
