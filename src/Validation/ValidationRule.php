@@ -393,7 +393,8 @@ abstract class ValidationRule extends Fluent
     {
         $placeholders = array_merge(
             [
-                'name' => $this->name,
+                // 'name' => $this->name, // We may want to include the name in the placeholders, but it's commented out for now.
+                'name' => '',
                 'args' => is_array($this->args)
                     ? Arr::join(Arr::reject($this->args, fn ($arg) => !is_string($arg) && !is_numeric($arg)), ', ')
                     : (string) $this->args
