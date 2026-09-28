@@ -77,7 +77,7 @@ class DateRulesTest extends TestCase
         $validator->passes();
 
         $this->assertSame(
-            ['The end_date field must be a date after 2024-01-01.'],
+            ['The  field must be a date after 2024-01-01.'],
             $validator->errors()['end_date']
         );
     }

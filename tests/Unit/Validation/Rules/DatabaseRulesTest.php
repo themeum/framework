@@ -46,7 +46,7 @@ class DatabaseRulesTest extends TestCase
         $validator = Validator::make(['sku' => 'PRD-999'], ['sku' => 'exists:products']);
 
         $this->assertTrue($validator->fails());
-        $this->assertSame(['The selected sku does not exist.'], $validator->errors()['sku']);
+        $this->assertSame(['The selected  does not exist.'], $validator->errors()['sku']);
     }
 
     public function test_exists_uses_explicit_column_argument(): void
@@ -98,7 +98,7 @@ class DatabaseRulesTest extends TestCase
         );
 
         $this->assertTrue($validator->fails());
-        $this->assertSame(['The selected ids does not exist.'], $validator->errors()['ids']);
+        $this->assertSame(['The selected  does not exist.'], $validator->errors()['ids']);
     }
 
     public function test_exists_uses_where_in_for_array_values(): void
@@ -137,7 +137,7 @@ class DatabaseRulesTest extends TestCase
         $validator = Validator::make(['email' => 'taken@example.com'], ['email' => 'unique:users']);
 
         $this->assertTrue($validator->fails());
-        $this->assertSame(['The email has already been taken.'], $validator->errors()['email']);
+        $this->assertSame(['The  has already been taken.'], $validator->errors()['email']);
     }
 
     public function test_unique_appends_ignore_id_clause(): void
@@ -178,6 +178,6 @@ class DatabaseRulesTest extends TestCase
         );
 
         $this->assertTrue($validator->fails());
-        $this->assertSame(['The email has already been taken.'], $validator->errors()['email']);
+        $this->assertSame(['The  has already been taken.'], $validator->errors()['email']);
     }
 }

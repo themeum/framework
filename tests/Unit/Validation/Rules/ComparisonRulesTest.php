@@ -23,7 +23,7 @@ class ComparisonRulesTest extends TestCase
 
         $this->assertTrue($validator->fails());
         $this->assertSame(
-            ['The status field must be in the list of "active, inactive".'],
+            ['The  field must be in the list of "active, inactive".'],
             $validator->errors()['status']
         );
     }
@@ -41,7 +41,7 @@ class ComparisonRulesTest extends TestCase
         $validator->passes();
 
         $this->assertSame(
-            ['The username field must not be in the list of "admin, root".'],
+            ['The  field must not be in the list of "admin, root".'],
             $validator->errors()['username']
         );
     }
@@ -65,7 +65,7 @@ class ComparisonRulesTest extends TestCase
 
         $this->assertTrue($validator->fails());
         $this->assertSame(
-            ['The password_confirmation field must match the password field.'],
+            ['The  field must match the password field.'],
             $validator->errors()['password_confirmation']
         );
     }

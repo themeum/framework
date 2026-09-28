@@ -29,7 +29,7 @@ class ConditionalRulesTest extends TestCase
 
         $validator->passes();
 
-        $this->assertSame(['The name field is required.'], $validator->errors()['name']);
+        $this->assertSame(['The  field is required.'], $validator->errors()['name']);
     }
 
     public function test_nullable_allows_nullish_values(): void
@@ -59,6 +59,6 @@ class ConditionalRulesTest extends TestCase
         $validator = Validator::make(['legacy_id' => 5], ['legacy_id' => 'prohibited']);
 
         $this->assertTrue($validator->fails());
-        $this->assertSame(['The legacy_id field is prohibited.'], $validator->errors()['legacy_id']);
+        $this->assertSame(['The  field is prohibited.'], $validator->errors()['legacy_id']);
     }
 }

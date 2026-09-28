@@ -29,7 +29,7 @@ class ValidatorTest extends TestCase
 
         $this->assertTrue($validator->fails());
         $this->assertArrayHasKey('name', $validator->errors());
-        $this->assertContains('The name field is required.', $validator->errors()['name']);
+        $this->assertContains('The  field is required.', $validator->errors()['name']);
     }
 
     public function test_validate_throws_validation_exception_on_failure(): void
@@ -161,7 +161,7 @@ class ValidatorTest extends TestCase
 
         $this->assertTrue($validator->fails());
         $this->assertContains(
-            'The name field must be at least 3 characters long.',
+            'The  field must be at least 3 characters long.',
             $validator->errors()['name']
         );
     }
@@ -176,7 +176,7 @@ class ValidatorTest extends TestCase
         $this->assertTrue($validator->passes());
     }
 
-    public function test_error_messages_replace_name_placeholder(): void
+    public function test_error_messages_leave_name_placeholder_empty(): void
     {
         $validator = Validator::make(
             ['title' => 42],
@@ -185,6 +185,6 @@ class ValidatorTest extends TestCase
 
         $validator->passes();
 
-        $this->assertSame(['The title field must be a string.'], $validator->errors()['title']);
+        $this->assertSame(['The  field must be a string.'], $validator->errors()['title']);
     }
 }

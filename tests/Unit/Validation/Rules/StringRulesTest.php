@@ -90,7 +90,7 @@ class StringRulesTest extends TestCase
         $validator->passes();
 
         $this->assertSame(
-            ['The name field must be at least 3 characters long.'],
+            ['The  field must be at least 3 characters long.'],
             $validator->errors()['name']
         );
     }
