@@ -1,0 +1,29 @@
+<?php
+
+namespace {{migrations_namespace}};
+
+use Framework\Contracts\Migration;
+use Framework\Database\Schema\Structure;
+use Framework\Supports\Facades\Schema;
+
+class {{class_name}} implements Migration
+{
+    public function up()
+    {
+        Schema::create('{{table}}', function (Structure $table) {
+            $table->id();
+            $table->string('uuid', 36);
+            $table->string('queue', 191);
+            $table->long_text('payload');
+            $table->long_text('exception');
+            $table->unsigned_integer('failed_at');
+
+            $table->unique('uuid');
+        });
+    }
+
+    public function down()
+    {
+        Schema::drop_if_exists('{{table}}');
+    }
+}
