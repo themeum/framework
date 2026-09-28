@@ -953,3 +953,66 @@ if (!class_exists('Automatic_Upgrader_Skin')) {
         }
     }
 }
+
+if (!function_exists('admin_url')) {
+    function admin_url($path = '', $scheme = 'admin')
+    {
+        return 'https://example.test/wp-admin/' . ltrim((string) $path, '/');
+    }
+}
+
+if (!function_exists('wp_next_scheduled')) {
+    function wp_next_scheduled($hook, $args = [])
+    {
+        return $GLOBALS['framework_test_cron'][$hook]['timestamp'] ?? false;
+    }
+}
+
+if (!function_exists('wp_schedule_event')) {
+    function wp_schedule_event($timestamp, $recurrence, $hook, $args = [], $wp_error = false)
+    {
+        $GLOBALS['framework_test_cron'][$hook] = [
+            'timestamp' => $timestamp,
+            'recurrence' => $recurrence,
+        ];
+
+        return true;
+    }
+}
+
+if (!class_exists('WP_CLI')) {
+    /**
+     * Records what a command printed. error() throws, standing in for the real one's exit.
+     */
+    class WP_CLI
+    {
+        public static $messages = [];
+
+        public static function add_command($name, $callable, $args = [])
+        {
+            return true;
+        }
+
+        public static function success($message)
+        {
+            static::$messages[] = ['success', $message];
+        }
+
+        public static function warning($message)
+        {
+            static::$messages[] = ['warning', $message];
+        }
+
+        public static function line($message = '')
+        {
+            static::$messages[] = ['line', $message];
+        }
+
+        public static function error($message, $exit = true)
+        {
+            static::$messages[] = ['error', $message];
+
+            throw new RuntimeException((string) $message);
+        }
+    }
+}

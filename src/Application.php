@@ -24,6 +24,7 @@ use Framework\Cache\CacheManager;
 use Framework\Cache\CacheServiceProvider;
 use Framework\RateLimiting\RateLimiter;
 use Framework\RateLimiting\RateLimiterServiceProvider;
+use Framework\Queue\QueueManager;
 use Framework\Console\Commands\ClearCacheCommand;
 use Framework\Console\Commands\ForgetCacheCommand;
 use Framework\Console\Commands\GcCacheCommand;
@@ -32,6 +33,8 @@ use Framework\Console\Commands\MakeModelCommand;
 use Framework\Console\Commands\MakeProviderCommand;
 use Framework\Console\Commands\MakeRequestCommand;
 use Framework\Console\Commands\MakeSeederCommand;
+use Framework\Console\Commands\MakeJobCommand;
+use Framework\Console\Commands\QueueTableCommand;
 use Framework\Console\Commands\MigrateCommand;
 use Framework\Console\Commands\RollbackCommand;
 use Framework\Console\Commands\SeedCommand;
@@ -324,6 +327,8 @@ class Application extends Container
             'cache:clear' => ClearCacheCommand::class,
             'cache:forget' => ForgetCacheCommand::class,
             'cache:gc' => GcCacheCommand::class,
+            'queue:table' => QueueTableCommand::class,
+            'make:job' => MakeJobCommand::class,
         ];
 
         foreach ($commands as $command => $class) {
@@ -343,6 +348,7 @@ class Application extends Container
         foreach (
             [
                 'cache' => CacheManager::class,
+                'queue' => QueueManager::class,
                 'limiter' => RateLimiter::class,
                 'db' => DatabaseManager::class,
                 'schema' => SchemaManager::class,

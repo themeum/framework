@@ -1,0 +1,30 @@
+<?php
+
+namespace {{namespace}};
+
+use Framework\Contracts\ShouldQueue;
+use Framework\Queue\Concerns\Queueable;
+
+class {{class_name}} implements ShouldQueue
+{
+    use Queueable;
+
+    /**
+     * Create a new job instance.
+     *
+     * Pass IDs and scalars rather than models or posts: the job is serialized
+     * when it is dispatched and restored, possibly minutes later, when it runs.
+     */
+    public function __construct()
+    {
+        //
+    }
+
+    /**
+     * Execute the job.
+     */
+    public function handle()
+    {
+        //
+    }
+}
