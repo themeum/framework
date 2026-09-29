@@ -67,6 +67,9 @@ class QueueCommandsTest extends QueueTestCase
 
         $this->assertStringContainsString('class CreateFailedJobsTable implements Migration', $failed);
         $this->assertStringContainsString("Schema::create('shop_failed_jobs'", $failed);
+        $this->assertStringContainsString("app()->prefix() . 'jobs_reserved_at_available_at_priority_index'", $jobs);
+        $this->assertStringContainsString("\$table->index('reserved_by', app()->prefix() . 'jobs_reserved_by_index');", $jobs);
+        $this->assertStringContainsString("\$table->unique('uuid', app()->prefix() . 'failed_jobs_uuid_unique');", $failed);
 
         $this->assert_valid_php($jobs);
         $this->assert_valid_php($failed);
@@ -100,6 +103,7 @@ class QueueCommandsTest extends QueueTestCase
         $this->assertStringContainsString('namespace Acme\\Shop\\Jobs;', $job);
         $this->assertStringContainsString('class SendAbandonedCartEmail implements ShouldQueue', $job);
         $this->assertStringContainsString('use Queueable;', $job);
+        $this->assertStringContainsString('use SerializesModels;', $job);
         $this->assertStringContainsString('public function handle()', $job);
         $this->assert_valid_php($job);
 

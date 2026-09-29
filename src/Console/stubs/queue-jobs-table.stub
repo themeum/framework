@@ -6,6 +6,8 @@ use Framework\Contracts\Migration;
 use Framework\Database\Schema\Structure;
 use Framework\Supports\Facades\Schema;
 
+use function Framework\app;
+
 class {{class_name}} implements Migration
 {
     public function up()
@@ -21,8 +23,11 @@ class {{class_name}} implements Migration
             $table->unsigned_integer('available_at');
             $table->unsigned_integer('created_at');
 
-            $table->index(['reserved_at', 'available_at', 'priority']);
-            $table->index('reserved_by');
+            $table->index(
+                ['reserved_at', 'available_at', 'priority'],
+                app()->prefix() . 'jobs_reserved_at_available_at_priority_index'
+            );
+            $table->index('reserved_by', app()->prefix() . 'jobs_reserved_by_index');
         });
     }
 

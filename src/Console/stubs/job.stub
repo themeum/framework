@@ -4,16 +4,19 @@ namespace {{namespace}};
 
 use Framework\Contracts\ShouldQueue;
 use Framework\Queue\Concerns\Queueable;
+use Framework\Queue\Concerns\SerializesModels;
 
 class {{class_name}} implements ShouldQueue
 {
     use Queueable;
+    use SerializesModels;
 
     /**
      * Create a new job instance.
      *
-     * Pass IDs and scalars rather than models or posts: the job is serialized
-     * when it is dispatched and restored, possibly minutes later, when it runs.
+     * Saved models and model collections on properties are stored as their
+     * IDs and fetched fresh when the job runs. Anything else, a WP_Post
+     * included, is frozen as it was at dispatch: pass its ID instead.
      */
     public function __construct()
     {

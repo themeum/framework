@@ -6,6 +6,7 @@ This guide covers deferring work to the background: publishing a product at a fu
 
 1. [Quick start](#1-quick-start)
 2. [Writing jobs](#2-writing-jobs)
+   - [Models on a job](#models-on-a-job)
 3. [Dispatching jobs](#3-dispatching-jobs)
 4. [How jobs run on WordPress](#4-how-jobs-run-on-wordpress)
 5. [Failures and retries](#5-failures-and-retries)
@@ -85,7 +86,7 @@ PublishScheduledProduct::dispatch(123)->delay($publish_at);   // a DateTimeInter
 
 A job is a class that implements `Framework\Contracts\ShouldQueue`, uses the `Framework\Queue\Concerns\Queueable` trait, and has a `handle()` method.
 
-**Pass IDs and scalars, not objects.** When a job is dispatched, the job object is serialized into the queue table. It is restored when it runs, which may be minutes or days later. A `WP_Post` or a model on a property is frozen as it was at dispatch time. Store the ID and load it fresh in `handle()`.
+**Job state is frozen at dispatch.** When a job is dispatched, the job object is serialized into the queue table. It is restored when it runs, which may be minutes or days later. Scalars and arrays are fine. Any other object on a property, a `WP_Post` included, is frozen as it was at dispatch time, so store its ID and load it fresh in `handle()`. Framework models are the exception, as long as the job uses `SerializesModels` (see [Models on a job](#models-on-a-job)).
 
 **`handle()` can ask for services.** Class-typed parameters are resolved from the container:
 
@@ -143,6 +144,71 @@ public function handle()
     // ...
 }
 ```
+
+### Models on a job
+
+Add `Framework\Queue\Concerns\SerializesModels` next to `Queueable` and a job can hold models directly. `make:job` includes it by default.
+
+```php
+use Framework\Contracts\ShouldQueue;
+use Framework\Queue\Concerns\Queueable;
+use Framework\Queue\Concerns\SerializesModels;
+
+class SendOrderReceipt implements ShouldQueue
+{
+    use Queueable;
+    use SerializesModels;
+
+    public $order;
+
+    public function __construct(Order $order)
+    {
+        $this->order = $order;
+    }
+
+    public function handle()
+    {
+        // $this->order was fetched from the database just now, not at dispatch.
+    }
+}
+
+SendOrderReceipt::dispatch($order);
+```
+
+**What gets stored.** A property holding a saved model is stored as its class, its primary key, and the names of the relations loaded on it. A property holding a model collection (`Framework\Database\Query\Collection`) is stored as the model class, the ordered list of keys, and the collection class. The attributes are not stored, so the payload stays small.
+
+**What gets restored.** When the job runs, each model is fetched again by its key, and the relations that were loaded at dispatch are eager-loaded again, nested ones included (`$order->load('items.product')` comes back with `items.product` loaded). `handle()` therefore sees current data.
+
+**Skipping the relations.** Pass `$order->without_relations()` to store the model without its loaded relations. The original `$order` keeps them.
+
+```php
+$this->order = $order->without_relations();
+```
+
+**Collections** are fetched in one query and keep their original order. Rows deleted since dispatch are dropped without an error. A collection mixing model classes, for example orders and customers, can't be queued: dispatching it throws a `LogicException`.
+
+**What is left as it is:**
+
+- A model that has never been saved has no row to fetch it back from, so it is stored whole, as it would be without the trait. The same goes for a collection containing one.
+- Models nested inside an array or another object are not converted. Only values held directly on a property are.
+- Static properties are not stored, and a typed property that was never assigned stays unassigned.
+
+**When a model has been deleted.** If a stored model no longer exists when the job runs, the job can't be built, so it doesn't run:
+
+- By default it moves straight to the failed jobs table with a `ModelNotFoundException`, whatever `$tries` it has left. `JobFailed` fires and the failure is logged. The job's `failed()` method is **not** called, because there is no job instance to call it on.
+- If a missing model simply means the work no longer matters, declare `$delete_when_missing_models`. The job is then deleted without a trace: no failed row, no event, no log.
+
+```php
+class SendOrderReceipt implements ShouldQueue
+{
+    use Queueable;
+    use SerializesModels;
+
+    public $delete_when_missing_models = true;
+}
+```
+
+**Adding or removing the trait.** A job that gains `SerializesModels` still restores payloads queued before the change, with those models frozen as they were. Removing the trait is different. Payloads queued while it was in use hold identifiers rather than models, so drain the queue before deploying a job without it.
 
 **Jobs must be idempotent.** A job can run more than once: after a retry, or if it outlives `retry_after` (see [section 6](#6-configuration)). Running it a second time must be harmless.
 
@@ -337,7 +403,13 @@ To test a job's own logic, call `handle()` directly or use `dispatch_sync()`.
 
 **Priority is a number on the job.** Laravel orders work by the list of queue names a worker is given. Here, the background worker drains every queue by numeric priority, and queue names are for grouping and filtering.
 
-**No `SerializesModels`.** Models are serialized as they are, not re-fetched when the job runs. Pass IDs.
+**`SerializesModels` has narrower coverage:**
+
+- **No connection is recorded.** A model's connection is set per class here, not per instance, so a model always comes back on its class's connection.
+- **No `#[WithoutRelations]` attribute.** PHP 7.4 has no attributes. Call `$model->without_relations()` before assigning the model instead.
+- **Unsaved models are kept whole.** Laravel converts them anyway, and the job then fails when it runs.
+- **No pivot or morph handling.** Laravel restores pivot models and morph maps. Here only the relations the ORM can eager-load are re-loaded.
+- **The property is snake_case:** `$delete_when_missing_models`, not `$deleteWhenMissingModels`.
 
 **Not implemented:** `ShouldBeUnique`, job chains (`Bus::chain`), job batches (`Bus::batch`), job middleware, rate-limited jobs, `dispatch_after_response`, and failed-job pruning (`queue:prune-failed`).
 

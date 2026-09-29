@@ -6,6 +6,8 @@ use Framework\Contracts\Migration;
 use Framework\Database\Schema\Structure;
 use Framework\Supports\Facades\Schema;
 
+use function Framework\app;
+
 class {{class_name}} implements Migration
 {
     public function up()
@@ -18,7 +20,7 @@ class {{class_name}} implements Migration
             $table->long_text('exception');
             $table->unsigned_integer('failed_at');
 
-            $table->unique('uuid');
+            $table->unique('uuid', app()->prefix() . 'failed_jobs_uuid_unique');
         });
     }
 

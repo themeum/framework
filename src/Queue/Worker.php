@@ -15,11 +15,13 @@ namespace Framework\Queue;
 defined('ABSPATH') || exit;
 
 use Framework\Contracts\ShouldQueue;
+use Framework\Exceptions\ModelNotFoundException;
 use Framework\Exceptions\QueueException;
 use Framework\Queue\Events\JobFailed;
 use Framework\Queue\Events\JobProcessed;
 use Framework\Queue\Events\JobProcessing;
 use Framework\Supports\Facades\Log;
+use ReflectionClass;
 use ReflectionMethod;
 use ReflectionNamedType;
 use Throwable;
@@ -158,6 +160,16 @@ class Worker
         try {
             $job = Payload::restore($envelope);
         } catch (QueueException $exception) {
+            $this->fail_job($record, null, $exception);
+
+            return;
+        } catch (ModelNotFoundException $exception) {
+            if ($this->delete_when_missing_models((string) $envelope['job'])) {
+                $this->queue->delete($record->id());
+
+                return;
+            }
+
             $this->fail_job($record, null, $exception);
 
             return;
@@ -300,6 +312,24 @@ class Worker
         } catch (Throwable $ignored) {
             // A log that cannot be written must not stop the worker.
         }
+    }
+
+    /**
+     * Determine whether a job class asks to be deleted, rather than failed, when its models are gone.
+     *
+     * The job could not be restored, so the flag is read from the class's default property value.
+     *
+     * @param string $class The job class, already checked by Payload::restore().
+     *
+     * @return bool
+     *
+     * @since 3.2.1
+     */
+    protected function delete_when_missing_models(string $class)
+    {
+        $defaults = (new ReflectionClass($class))->getDefaultProperties();
+
+        return ($defaults['delete_when_missing_models'] ?? false) === true;
     }
 
     /**
