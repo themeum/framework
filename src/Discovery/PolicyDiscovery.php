@@ -12,6 +12,7 @@ namespace Framework\Discovery;
 
 defined('ABSPATH') || exit;
 
+use Framework\Concerns\DiscoversClassFiles;
 use Framework\Contracts\Cacheable;
 use Framework\Contracts\Discoverable;
 use Framework\Supports\Facades\File;
@@ -23,6 +24,8 @@ use function Framework\Polyfill\str_ends_with;
 
 class PolicyDiscovery implements Discoverable, Cacheable
 {
+    use DiscoversClassFiles;
+
     /**
      * The discovered policies array.
      *
@@ -65,15 +68,13 @@ class PolicyDiscovery implements Discoverable, Cacheable
             return $this;
         }
 
-        $policy_files = glob($policies_directory . '/*.php');
+        $policy_files = $this->class_files($policies_directory);
 
         if (empty($policy_files)) {
             return $this;
         }
 
-        foreach ($policy_files as $policy_file) {
-            $policy_name = $this->filename($policy_file);
-
+        foreach ($policy_files as $policy_name) {
             if (!$this->is_valid_policy_name($policy_name)) {
                 continue;
             }
@@ -85,20 +86,6 @@ class PolicyDiscovery implements Discoverable, Cacheable
         }
 
         return $this;
-    }
-
-    /**
-     * Get the filename of the policy.
-     *
-     * @param string $path The path.
-     *
-     * @return string
-     *
-     * @since 1.0.0
-     */
-    protected function filename(string $path)
-    {
-        return basename($path, '.php');
     }
 
     /**
@@ -147,6 +134,9 @@ class PolicyDiscovery implements Discoverable, Cacheable
 
     /**
      * Get the model class from the policy name.
+     *
+     * A policy in a subfolder maps to a model in the matching subfolder, so
+     * `Policies\Shop\ProductPolicy` is paired with `Models\Shop\Product`.
      *
      * @param string $policy_name The policy name.
      *

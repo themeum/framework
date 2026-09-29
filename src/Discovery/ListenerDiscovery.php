@@ -12,6 +12,7 @@ namespace Framework\Discovery;
 
 defined('ABSPATH') || exit;
 
+use Framework\Concerns\DiscoversClassFiles;
 use Framework\Contracts\Cacheable;
 use Framework\Contracts\Discoverable;
 use Framework\Supports\Facades\File;
@@ -26,6 +27,8 @@ use function Framework\config_path;
 
 class ListenerDiscovery implements Discoverable, Cacheable
 {
+    use DiscoversClassFiles;
+
     /**
      * The discovered listeners array .
      *
@@ -66,16 +69,14 @@ class ListenerDiscovery implements Discoverable, Cacheable
             return $this;
         }
 
-        $listeners_files = glob($listeners_directory . '/*.php');
+        $listeners_files = $this->class_files($listeners_directory);
 
         if (empty($listeners_files)) {
             return $this;
         }
 
-        foreach ($listeners_files as $file) {
-            $listener = $this->listener_class(
-                $this->filename($file)
-            );
+        foreach ($listeners_files as $filename) {
+            $listener = $this->listener_class($filename);
 
             if (!$this->is_valid_listener($listener)) {
                 continue;
@@ -159,23 +160,9 @@ class ListenerDiscovery implements Discoverable, Cacheable
     }
 
     /**
-     * Get the filename of the listener.
-     *
-     * @param string $file The file.
-     *
-     * @return string
-     *
-     * @since 1.0.0
-     */
-    protected function filename(string $file)
-    {
-        return basename($file, '.php');
-    }
-
-    /**
      * Get the listener class of the filename.
      *
-     * @param string $filename The filename.
+     * @param string $filename The class path relative to the listeners directory.
      *
      * @return string
      *
