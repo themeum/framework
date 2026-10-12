@@ -1,10 +1,10 @@
 <?php
 /**
  * Encodes a job into the JSON envelope stored in the jobs table, and restores it again.
- * The class named in the envelope is checked against ShouldQueue before unserialize() runs and
- * the result is checked again afterwards, so a tampered row cannot pick an arbitrary entry point.
- * A strict allowed_classes list is not used because it would silently turn legitimate value
- * objects on a job's properties into incomplete classes.
+ * The job's properties are stored as a JSON value tree and rebuilt without PHP object deserialization.
+ * The class named in the envelope is checked against ShouldQueue and against the class in the
+ * data before anything is instantiated, and every nested class is checked against the allowlist
+ * in ValueCodec, so a tampered row cannot make the worker create an arbitrary object.
  *
  * @package    Framework
  * @subpackage Queue
@@ -16,6 +16,8 @@ defined('ABSPATH') || exit;
 
 use Framework\Contracts\ShouldQueue;
 use Framework\Exceptions\QueueException;
+use ReflectionException;
+use TypeError;
 
 use function Framework\uuid;
 
@@ -30,6 +32,8 @@ class Payload
      *
      * @return string
      *
+     * @throws \Framework\Exceptions\QueueException When the job holds a value that cannot be stored.
+     *
      * @since 3.2.0
      */
     public static function encode(ShouldQueue $job, int $default_tries = 1, $default_backoff = 0)
@@ -40,15 +44,24 @@ class Payload
         $tries = $job->get_tries();
         $backoff = $job->get_backoff();
 
-        return (string) wp_json_encode([
+        $class = get_class($job);
+        $data = ValueCodec::for_job($class)->encode($clone, $class);
+
+        $payload = wp_json_encode([
             'uuid' => (string) uuid(),
-            'display_name' => get_class($job),
-            'job' => get_class($job),
+            'display_name' => $class,
+            'job' => $class,
             'max_tries' => max(1, (int) ($tries ?? $default_tries)),
             'backoff' => $backoff ?? $default_backoff,
             'priority' => $job->get_priority(),
-            'data' => serialize($clone),
-        ]);
+            'data' => $data,
+        ], JSON_PRESERVE_ZERO_FRACTION);
+
+        if (!is_string($payload)) {
+            throw QueueException::invalid_payload(sprintf('the job [%s] could not be encoded as JSON.', $class));
+        }
+
+        return $payload;
     }
 
     /**
@@ -66,7 +79,7 @@ class Payload
     {
         $envelope = json_decode($payload, true);
 
-        if (!is_array($envelope) || !isset($envelope['job'], $envelope['data']) || !is_string($envelope['data'])) {
+        if (!is_array($envelope) || !isset($envelope['job'], $envelope['data'])) {
             throw QueueException::invalid_payload('the envelope is not valid JSON or is missing its job data.');
         }
 
@@ -100,7 +113,17 @@ class Payload
             ));
         }
 
-        $job = unserialize($envelope['data'], ['allowed_classes' => true]);
+        $data = $envelope['data'];
+
+        if (!is_array($data) || ($data['c'] ?? null) !== $class) {
+            throw QueueException::invalid_payload(sprintf('the data does not restore to [%s].', $class));
+        }
+
+        try {
+            $job = ValueCodec::for_job($class)->decode($data);
+        } catch (TypeError | ReflectionException $exception) {
+            throw QueueException::invalid_payload($exception->getMessage());
+        }
 
         if (!$job instanceof $class) {
             throw QueueException::invalid_payload(sprintf('the data does not restore to [%s].', $class));

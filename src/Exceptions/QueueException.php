@@ -63,6 +63,26 @@ class QueueException extends RuntimeException
     }
 
     /**
+     * A job holds a value that cannot be stored in the payload.
+     *
+     * @param string $path Where the value sits, such as the job class and property.
+     * @param string $type The type or class of the value.
+     *
+     * @return static
+     *
+     * @since 3.2.2
+     */
+    public static function unsupported_value(string $path, string $type)
+    {
+        return new static(sprintf(
+            'The queued job cannot store %s at [%s]. Store an ID and load it in handle(), or list the class in '
+            . 'the job\'s $allowed_classes if it is a plain value object.',
+            $type,
+            $path
+        ));
+    }
+
+    /**
      * A job was reclaimed more times than it is allowed to run.
      *
      * @param string $job The job's display name.

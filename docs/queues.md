@@ -86,7 +86,27 @@ PublishScheduledProduct::dispatch(123)->delay($publish_at);   // a DateTimeInter
 
 A job is a class that implements `Framework\Contracts\ShouldQueue`, uses the `Framework\Queue\Concerns\Queueable` trait, and has a `handle()` method.
 
-**Job state is frozen at dispatch.** When a job is dispatched, the job object is serialized into the queue table. It is restored when it runs, which may be minutes or days later. Scalars and arrays are fine. Any other object on a property, a `WP_Post` included, is frozen as it was at dispatch time, so store its ID and load it fresh in `handle()`. Framework models are the exception, as long as the job uses `SerializesModels` (see [Models on a job](#models-on-a-job)).
+**Job state is frozen at dispatch.** When a job is dispatched, its properties are stored as JSON in the queue table and restored when it runs, which may be minutes or days later. Scalars, arrays, `DateTime`, `DateTimeImmutable` and `DateInterval` are fine. Framework models are fine too, and with `SerializesModels` they are re-fetched fresh (see [Models on a job](#models-on-a-job)). Any other object, a `WP_Post` included, is refused when you dispatch: the exception names the property, so store its ID and load it fresh in `handle()`. Closures and resources are refused as well.
+
+**Allowing your own value objects.** A plain value object can be stored if the job lists its class in `$allowed_classes`. The class is restored without its constructor, with the property values it had at dispatch:
+
+```php
+class ChargeCustomer implements ShouldQueue
+{
+    use Queueable;
+
+    protected $allowed_classes = [Money::class];
+
+    public $amount;
+
+    public function __construct(Money $amount)
+    {
+        $this->amount = $amount;
+    }
+}
+```
+
+Only these classes can ever be created from a stored row, so a tampered row naming any other class fails the job instead of instantiating it. `$allowed_classes` is deliberately not declared by `Queueable`, because a job that redeclares it with a different default would be a fatal error on PHP 7.4. Declare it as `protected` on the job itself.
 
 **`handle()` can ask for services.** Class-typed parameters are resolved from the container:
 
@@ -412,6 +432,8 @@ To test a job's own logic, call `handle()` directly or use `dispatch_sync()`.
 - **The property is snake_case:** `$delete_when_missing_models`, not `$deleteWhenMissingModels`.
 
 **Not implemented:** `ShouldBeUnique`, job chains (`Bus::chain`), job batches (`Bus::batch`), job middleware, rate-limited jobs, `dispatch_after_response`, and failed-job pruning (`queue:prune-failed`).
+
+**Job state is stored as JSON, not PHP serialization.** Laravel serializes the whole job object, so any object on a property works. Here only dates, framework models and collections, and classes the job lists in `$allowed_classes` are accepted, and anything else fails at dispatch. Circular references and PHP references are not supported, and `DateInterval::$days` is not kept.
 
 **Failed jobs are identified by numeric ID** in `queue:retry` and `queue:forget`, not by UUID.
 

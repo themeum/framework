@@ -56,10 +56,10 @@ class SerializesModelsTest extends QueueTestCase
     {
         ArticleJob::dispatch(QueuedArticle::find(1));
 
-        $data = Payload::decode($this->only_row()['payload'])['data'];
+        $data = json_encode(Payload::decode($this->only_row()['payload'])['data']);
 
-        $this->assertStringContainsString(QueuedArticle::class, $data);
-        $this->assertStringContainsString(ModelIdentifier::class, $data);
+        $this->assertStringContainsString(json_encode(QueuedArticle::class), $data);
+        $this->assertStringContainsString(json_encode(ModelIdentifier::class), $data);
         $this->assertStringNotContainsString('long body', $data);
     }
 
@@ -284,13 +284,12 @@ class SerializesModelsTest extends QueueTestCase
         ArticleJob::dispatch(QueuedArticle::find(1));
 
         $row = $this->only_row();
-        $envelope = Payload::decode($row['payload']);
-        $envelope['data'] = str_replace(
-            's:' . strlen(QueuedArticle::class) . ':"' . QueuedArticle::class . '"',
-            's:' . strlen(SendEmail::class) . ':"' . SendEmail::class . '"',
-            $envelope['data']
+        $payload = str_replace(
+            json_encode(QueuedArticle::class),
+            json_encode(SendEmail::class),
+            $row['payload']
         );
-        $this->queue->rows[$row['id']]['payload'] = wp_json_encode($envelope);
+        $this->queue->rows[$row['id']]['payload'] = $payload;
 
         $this->worker->run();
 
