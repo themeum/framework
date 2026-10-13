@@ -60,7 +60,28 @@ class SiteExceptionHandler
 
         Log::error($exception->getMessage());
 
-        static::fail($status, $exception->getMessage() ?: 'Internal Server Error');
+        $message = $exception->getMessage();
+
+        if ($status >= Response::INTERNAL_SERVER_ERROR && !static::is_debug()) {
+            $message = '';
+        }
+
+        static::fail($status, $message ?: 'Internal Server Error');
+    }
+
+    /**
+     * Whether internal error details may be shown to the visitor.
+     *
+     * A server error's message can carry SQL, file paths, or other internals, so it only reaches
+     * the page while WP_DEBUG is on; it is always logged regardless.
+     *
+     * @return bool
+     *
+     * @since 1.0.0
+     */
+    protected static function is_debug()
+    {
+        return defined('WP_DEBUG') && WP_DEBUG;
     }
 
     /**

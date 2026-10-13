@@ -677,6 +677,8 @@ public function show(Request $request, Product $product)
 
 **Expected:** WordPress shows a `wp_die()` error page with the mapped status. REST routes continue to use `ApiExceptionHandler` / `WP_Error` responses.
 
+For an "other / unhandled" exception that resolves to a 5xx status, both handlers replace the message with a generic `Internal Server Error` unless `WP_DEBUG` is on, because such messages can carry SQL, bindings, or file paths. The original message is always written to the log. A 4xx code keeps its message (`new Exception('Not Found', 404)` still shows "Not Found"), and an `HttpException` always shows the message it was given, 5xx included, since that text was chosen for the client.
+
 ---
 
 

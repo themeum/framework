@@ -15,6 +15,7 @@ use Framework\Exceptions\HttpException;
 use Framework\Exceptions\ModelNotFoundException;
 use Framework\Exceptions\ValidationException;
 use Framework\Http\Response;
+use Framework\Supports\Facades\Log;
 use Exception;
 
 use function Framework\response;
@@ -82,10 +83,33 @@ class ApiExceptionHandler
             $status_code = Response::INTERNAL_SERVER_ERROR; // fallback to 500
         }
 
+        Log::error($exception->getMessage());
+
+        $message = $exception->getMessage();
+
+        if ($status_code >= Response::INTERNAL_SERVER_ERROR && !static::is_debug()) {
+            $message = 'Internal Server Error';
+        }
+
         $response = [
-            'message' => $exception->getMessage(),
+            'message' => $message,
         ];
 
         return response()->json($response, $status_code);
+    }
+
+    /**
+     * Whether internal error details may be returned to the client.
+     *
+     * A server error's message can carry SQL, file paths, or other internals, so it only reaches
+     * the response while WP_DEBUG is on.
+     *
+     * @return bool
+     *
+     * @since 1.0.0
+     */
+    protected static function is_debug()
+    {
+        return defined('WP_DEBUG') && WP_DEBUG;
     }
 }
