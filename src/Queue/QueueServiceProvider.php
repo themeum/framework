@@ -75,7 +75,7 @@ class QueueServiceProvider extends ServiceProvider
         add_filter('cron_schedules', function ($schedules) use ($schedule) {
             $schedules[$schedule] = [
                 'interval' => MINUTE_IN_SECONDS,
-                'display' => __('Every minute (queue sweep)'),
+                'display' => 'Every minute (queue sweep)',
             ];
 
             return $schedules;
