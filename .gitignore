@@ -15,7 +15,5 @@
 /example/composer.lock
 /example/libraries/
 
-# OpenSpec
-/openspec/
 .cursor/commands/opsx-*.md
 .cursor/skills/openspec-*/

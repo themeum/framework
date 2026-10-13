@@ -57,7 +57,7 @@ class FileStoreGcMemoryTest extends CacheTestCase
             $entry = Entry::make('key-' . $i, 'value', $this->now, $expires_at);
             $path = $bucket . '/' . sprintf('%05d', $i) . '.php';
 
-            $this->files->put($path, FileStore::GUARD . serialize($entry));
+            $this->files->put($path, FileStore::GUARD . json_encode($entry));
         }
     }
 
@@ -76,7 +76,7 @@ class FileStoreGcMemoryTest extends CacheTestCase
         $bucket = $this->directory . '/aa/bb';
         $this->files->make_dir($bucket);
         $this->files->put($bucket . '/index.txt', 'not a cache entry');
-        $this->files->put($bucket . '/entry.php', FileStore::GUARD . serialize(
+        $this->files->put($bucket . '/entry.php', FileStore::GUARD . json_encode(
             Entry::make('key', 'value', $this->now, $this->now + 60)
         ));
 

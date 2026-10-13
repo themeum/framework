@@ -6,7 +6,10 @@ use Framework\Cache\CacheManager;
 use Framework\Cache\Repository;
 use Framework\Cache\Stores\ArrayStore;
 use Framework\Cache\Stores\DatabaseStore;
+use Framework\Exceptions\ValueCodecException;
+use Framework\Tests\Support\Cache\AllowlistCacheManager;
 use Framework\Tests\Support\Cache\ConfigurableCacheManager;
+use Framework\Tests\Support\Cache\Money;
 use InvalidArgumentException;
 
 class CacheManagerTest extends CacheTestCase
@@ -133,5 +136,37 @@ class CacheManagerTest extends CacheTestCase
         ]);
 
         $this->assertSame([], $manager->sweepable_stores());
+    }
+
+    public function test_configured_allowed_classes_reach_the_database_store_and_the_file_fallback()
+    {
+        $manager = (new AllowlistCacheManager())->set_allowed_classes([Money::class]);
+
+        // No direct filesystem in the test process, so the file store diverts to its database fallback.
+        foreach (['database', 'file'] as $name) {
+            $manager->store($name)->put('price', new Money(500, 'BDT'), 60);
+
+            $this->assertInstanceOf(DatabaseStore::class, $manager->store($name)->get_store());
+            $this->assertSame('BDT', $manager->store($name)->get('price')->currency());
+        }
+    }
+
+    public function test_a_class_missing_from_the_allowlist_is_refused_by_a_persistent_store()
+    {
+        $manager = new CacheManager();
+
+        $this->expectException(ValueCodecException::class);
+
+        $manager->store('database')->put('price', new Money(500, 'BDT'), 60);
+    }
+
+    public function test_the_array_store_ignores_the_allowlist()
+    {
+        $manager = new CacheManager();
+        $money = new Money(500, 'BDT');
+
+        $manager->store('array')->put('price', $money, 60);
+
+        $this->assertSame($money, $manager->store('array')->get('price'));
     }
 }

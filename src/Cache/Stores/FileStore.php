@@ -12,6 +12,7 @@ namespace Framework\Cache\Stores;
 
 defined('ABSPATH') || exit;
 
+use Framework\Cache\Concerns\EncodesEntries;
 use Framework\Cache\Concerns\HashesKeys;
 use Framework\Cache\Concerns\InteractsWithTime;
 use Framework\Cache\Entry;
@@ -19,12 +20,14 @@ use Framework\Contracts\CacheEntryProvider;
 use Framework\Contracts\Store;
 use Framework\Exceptions\StoreUnavailableException;
 use Framework\Filesystem\Filesystem;
+use Framework\Supports\ValueCodec;
 use Throwable;
 
 use function Framework\throw_if;
 
 class FileStore implements Store, CacheEntryProvider
 {
+    use EncodesEntries;
     use HashesKeys;
     use InteractsWithTime;
 
@@ -102,17 +105,24 @@ class FileStore implements Store, CacheEntryProvider
      * @param string $prefix The prefix identifying this application's directory and options.
      * @param string|null $path The configured directory, or null to derive one.
      * @param bool $network Whether the store is shared across a network.
+     * @param ValueCodec|null $codec The codec values are encoded with, or null for the built-in allowlist.
      *
      * @return void
      *
      * @since 1.0.0
      */
-    public function __construct(Filesystem $files, string $prefix, $path = null, bool $network = false)
-    {
+    public function __construct(
+        Filesystem $files,
+        string $prefix,
+        $path = null,
+        bool $network = false,
+        ?ValueCodec $codec = null
+    ) {
         $this->files = $files;
         $this->prefix = $prefix;
         $this->configured_path = $path;
         $this->network = $network;
+        $this->codec = $codec ?? new ValueCodec();
     }
 
     /**
@@ -248,7 +258,7 @@ class FileStore implements Store, CacheEntryProvider
      */
     public function get_entry(string $key)
     {
-        $entry = Entry::read($this->read_payload($this->path($key)), $key);
+        $entry = $this->restore_entry($this->read_payload($this->path($key)), $key);
 
         if (is_null($entry)) {
             return null;
@@ -550,11 +560,12 @@ class FileStore implements Store, CacheEntryProvider
     }
 
     /**
-     * Read and unserialize the payload stored at the given path.
+     * Read and parse the envelope stored at the given path, leaving its value encoded.
      *
      * A missing entry is the ordinary case for a cache, so it resolves to null rather than
      * raising. The filesystem is checked first, and the read is still guarded because the file
-     * may be removed between the two calls.
+     * may be removed between the two calls. The value is left encoded so the sweep can check an
+     * entry's expiry without ever creating an object from it.
      *
      * @param string $path The absolute path of the entry file.
      *
@@ -578,33 +589,40 @@ class FileStore implements Store, CacheEntryProvider
             return null;
         }
 
-        $payload = @unserialize(substr($contents, strlen(static::GUARD)));
-
-        return $payload === false ? null : $payload;
+        return json_decode(substr($contents, strlen(static::GUARD)), true);
     }
 
     /**
      * Write a payload to the given path without ever leaving a partial file behind.
      *
      * The payload is written to a temporary name and then moved into place, which the direct
-     * filesystem transport performs with rename().
+     * filesystem transport performs with rename(). The value is encoded before anything is
+     * written, so a value that cannot be stored leaves the existing entry untouched.
      *
      * @param string $path The absolute path of the entry file.
      * @param array $entry The envelope to store.
      *
      * @return bool
      *
+     * @throws \Framework\Exceptions\ValueCodecException When the value holds something that cannot be stored.
+     *
      * @since 1.0.0
      */
     protected function write_payload(string $path, array $entry)
     {
+        $contents = $this->encode_entry($entry, (string) ($entry['key'] ?? ''));
+
+        if ($contents === false) {
+            return false;
+        }
+
         $this->ensure_directory();
 
         $this->files->make_dir($this->files->dirname($path));
 
         $temporary = $path . '.' . uniqid('tmp', true);
 
-        if (!$this->files->put($temporary, static::GUARD . serialize($entry))) {
+        if (!$this->files->put($temporary, static::GUARD . $contents)) {
             return false;
         }
 

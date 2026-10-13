@@ -12,16 +12,19 @@ namespace Framework\Cache\Stores;
 
 defined('ABSPATH') || exit;
 
+use Framework\Cache\Concerns\EncodesEntries;
 use Framework\Cache\Concerns\HashesKeys;
 use Framework\Cache\Concerns\InteractsWithTime;
 use Framework\Cache\Entry;
 use Framework\Contracts\CacheEntryProvider;
 use Framework\Contracts\Store;
 use Framework\Supports\Facades\DB;
+use Framework\Supports\ValueCodec;
 use Throwable;
 
 class DatabaseStore implements Store, CacheEntryProvider
 {
+    use EncodesEntries;
     use HashesKeys;
     use InteractsWithTime;
 
@@ -89,16 +92,18 @@ class DatabaseStore implements Store, CacheEntryProvider
      * @param string $prefix The prefix every key is written under.
      * @param int $forever_ttl The lifetime given to entries that never logically expire.
      * @param bool $network Whether the store is shared across a network.
+     * @param ValueCodec|null $codec The codec values are encoded with, or null for the built-in allowlist.
      *
      * @return void
      *
      * @since 1.0.0
      */
-    public function __construct(string $prefix, int $forever_ttl = 0, bool $network = false)
+    public function __construct(string $prefix, int $forever_ttl = 0, bool $network = false, ?ValueCodec $codec = null)
     {
         $this->prefix = $prefix;
         $this->forever_ttl = $forever_ttl;
         $this->network = $network;
+        $this->codec = $codec ?? new ValueCodec();
     }
 
     /**
@@ -158,7 +163,7 @@ class DatabaseStore implements Store, CacheEntryProvider
      */
     public function get_entry(string $key)
     {
-        $entry = Entry::read($this->read_transient($this->storage_key($key)), $key);
+        $entry = $this->decode_entry($this->read_transient($this->storage_key($key)), $key);
 
         if (is_null($entry)) {
             return null;
@@ -235,7 +240,7 @@ class DatabaseStore implements Store, CacheEntryProvider
             is_null($fresh_for) ? null : $now + (int) $fresh_for
         );
 
-        return $this->write_transient($this->storage_key($key), $entry, $seconds);
+        return $this->write_entry($key, $entry, $seconds);
     }
 
     /**
@@ -280,7 +285,7 @@ class DatabaseStore implements Store, CacheEntryProvider
 
         $entry = Entry::make($key, $value, $this->current_timestamp(), null);
 
-        return $this->write_transient($this->storage_key($key), $entry, $this->forever_ttl);
+        return $this->write_entry($key, $entry, $this->forever_ttl);
     }
 
     /**
@@ -355,7 +360,7 @@ class DatabaseStore implements Store, CacheEntryProvider
             ? $this->forever_ttl
             : max(1, (int) $expires_at - $this->current_timestamp());
 
-        return $this->write_transient($this->storage_key($key), $entry, $seconds) ? $new : false;
+        return $this->write_entry($key, $entry, $seconds) ? $new : false;
     }
 
     /**
@@ -454,7 +459,7 @@ class DatabaseStore implements Store, CacheEntryProvider
             $seconds = is_null($expires_at) ? $this->forever_ttl : max(1, (int) $expires_at - $now);
         }
 
-        $this->write_transient($this->storage_key($key), $entry, $seconds);
+        $this->write_entry($key, $entry, $seconds);
     }
 
     /**
@@ -791,6 +796,32 @@ class DatabaseStore implements Store, CacheEntryProvider
     protected function version_option()
     {
         return $this->prefix . 'cache_version';
+    }
+
+    /**
+     * Encode an envelope and write it to the transient for its key.
+     *
+     * The transient holds a JSON string, so WordPress never unserializes an object from it.
+     *
+     * @param string $key The cache key.
+     * @param array $entry The envelope.
+     * @param int $seconds The lifetime in seconds.
+     *
+     * @return bool
+     *
+     * @throws \Framework\Exceptions\ValueCodecException When the value holds something that cannot be stored.
+     *
+     * @since 3.2.4
+     */
+    protected function write_entry(string $key, array $entry, int $seconds)
+    {
+        $contents = $this->encode_entry($entry, $key);
+
+        if ($contents === false) {
+            return false;
+        }
+
+        return $this->write_transient($this->storage_key($key), $contents, $seconds);
     }
 
     /**

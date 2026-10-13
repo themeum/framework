@@ -22,6 +22,7 @@ use Framework\Cache\Stores\MemoizedStore;
 use Framework\Contracts\Store;
 use Framework\Filesystem\Filesystem;
 use Framework\Supports\Facades\Log;
+use Framework\Supports\ValueCodec;
 use Framework\Supports\Traits\Macroable;
 use InvalidArgumentException;
 use Throwable;
@@ -300,8 +301,27 @@ class CacheManager
         return new DatabaseStore(
             $this->prefix(),
             (int) ($config['forever_ttl'] ?? 0),
-            (bool) ($config['network'] ?? false)
+            (bool) ($config['network'] ?? false),
+            $this->value_codec()
         );
+    }
+
+    /**
+     * Build the codec the persistent stores encode values with.
+     *
+     * The allowlist is shared by every store rather than set per store, because the file store
+     * can silently divert to its fallback and a value must not be accepted by one and refused by
+     * the other.
+     *
+     * @return ValueCodec
+     *
+     * @since 3.2.4
+     */
+    protected function value_codec()
+    {
+        $allowed = config('cache.allowed_classes', []);
+
+        return new ValueCodec(is_array($allowed) ? $allowed : []);
     }
 
     /**
@@ -341,7 +361,8 @@ class CacheManager
                 app(Filesystem::class),
                 $this->prefix(),
                 $config['path'] ?? null,
-                (bool) ($config['network'] ?? false)
+                (bool) ($config['network'] ?? false),
+                $this->value_codec()
             );
 
             return $this->repository($store, $name, $config['events'] ?? true);

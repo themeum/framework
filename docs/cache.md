@@ -261,6 +261,24 @@ Expired entries are removed when a read finds them, and by a scheduled sweep tha
 
 Honours lifetimes exactly as the persistent drivers do, so a test written against it predicts production behaviour.
 
+### What the persistent drivers can store
+
+`database` and `file` store each entry as JSON, never as PHP-serialized data, so a tampered entry cannot make PHP create an arbitrary object. This also satisfies the WordPress.org plugin review rule on `unserialize()`. These values round trip with their exact types:
+
+- integers, floats (including `INF` and `-INF`), booleans, `null`, and strings, including binary ones;
+- lists and keyed arrays, nested to any depth;
+- `stdClass`, `DateTime`, `DateTimeImmutable`, `DateInterval` and `Somoy` dates (same instant and time zone);
+- models (attributes, original attributes and loaded relations) and collections;
+- instances of any class listed in [`allowed_classes`](#10-configuration).
+
+An object is restored without its constructor being called, with the property values it had when it was stored.
+
+**Storing anything else throws.** A `WP_Post`, a `Paginator`, a closure, or an object of your own class that is not on the list makes `put()`, `forever()`, `remember()` and the other writes throw a `Framework\Exceptions\ValueCodecException`. The message names the key, where the value sits within it, and its class. Nothing is written, and the key's previous entry is left as it was. Cache an ID or plain data instead, or add the class to `allowed_classes` if it is a plain value object. The `array` driver never encodes values, so it accepts any object.
+
+**Unreadable entries are misses.** An entry that is corrupt, names a class that is not allowed, or no longer fits its class (for example, a typed property that changed type since it was cached) reads as a miss rather than raising.
+
+**Upgrading from 3.2.3 or earlier empties the cache once.** Entries written in the old serialized format read as misses and are replaced on their next write. The `file` driver's sweep removes old files as it reaches them. No migration step is needed.
+
 ---
 
 ## 10. Configuration
@@ -269,8 +287,9 @@ Honours lifetimes exactly as the persistent drivers do, so a test written agains
 
 ```php
 return [
-    'default' => 'database',
-    'stores'  => [
+    'default'         => 'database',
+    'allowed_classes' => [],         // extra classes the persistent drivers may store
+    'stores'          => [
         'database' => [
             'driver'      => 'database',
             'forever_ttl' => 10 * YEAR_IN_SECONDS,
@@ -292,6 +311,18 @@ return [
 
 Naming a driver that is not registered raises `InvalidArgumentException` identifying the driver and the store. Nothing is ever substituted silently.
 
+### `allowed_classes`
+
+The classes the `database` and `file` drivers may store, on top of the built-in set listed in [section 9](#what-the-persistent-drivers-can-store). List plain value objects here, not services or anything holding a connection:
+
+```php
+'allowed_classes' => [
+    \MyPlugin\Money::class,
+],
+```
+
+It applies to every store rather than per store, because a `file` store can silently divert to its `fallback`. A value must not be accepted by one and refused by the other. The list is only ever read from configuration, never from stored data.
+
 ---
 
 ## 11. Events
@@ -312,13 +343,15 @@ To share a store across an entire network, set `'network' => true`. Its entries 
 
 ## 13. Where this differs from Laravel
 
-Four deliberate divergences, each forced by WordPress:
+Five deliberate divergences, each forced by WordPress:
 
 **`forever()` uses a long finite lifetime.** WordPress marks a transient with no expiry as an *autoloaded* option, and skips its own 150,000-byte autoload guard when doing so — so a large `forever()` value would be read and unserialized on every request, at a cost paid before your code runs and therefore nearly undiagnosable. The entry never logically expires as far as the cache API is concerned, while the underlying transient is given a ten-year lifetime so WordPress leaves it out of autoload. Set `forever_ttl` to `0` for literal never-expiry. Note that Laravel does not treat `forever` as durable either — its own documentation warns that Memcached may evict such entries.
 
 **`flexible()` refreshes on `shutdown`.** Laravel uses deferred functions and an atomic lock; neither exists here. See [section 5](#5-stale-while-revalidate).
 
 **`increment()` and `decrement()` are only atomic on the `database` driver with a persistent object cache active.** See [section 7](#7-removing-values).
+
+**Only allowed classes can be cached.** Laravel serializes whatever you give it. Here the `database` and `file` drivers store JSON and restore only built-in types and the classes in `allowed_classes`; anything else throws when written. WordPress.org rejects plugins that call `unserialize()` without disabling object creation, and that rule is what closes off PHP object injection through a tampered cache entry. See [section 9](#what-the-persistent-drivers-can-store).
 
 **`flush()` advances a namespace version.** Necessary because transients cannot be enumerated under an object cache. The practical effect is the same — every prior key reads as a miss — and it takes constant time. Reclaiming the rows a version leaves behind happens later, off the request that called `flush()`, in the same scheduled sweep described in [section 9](#9-the-drivers).
 
