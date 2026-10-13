@@ -24,6 +24,7 @@ use Framework\Facade;
  * @method static void emergency($message)
  * @method static void critical($message)
  * @method static void alert($message)
+ * @method static string path()
  * @see    \Framework\Managers\LogManager
  */
 class Log extends Facade
