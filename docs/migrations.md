@@ -102,6 +102,8 @@ Schema::create('posts', function (Structure $table) {
 });
 ```
 
+`timestamps()` adds `created_at` (defaulting to `CURRENT_TIMESTAMP`) and a nullable `updated_at` as `TIMESTAMP` columns. `datetimes()` adds the same pair as `DATETIME` columns, which avoids `TIMESTAMP`'s 2038 limit and its time zone conversion. Both accept an optional precision, e.g. `$table->datetimes(6)`. Unlike Laravel's `datetimes()`, where both columns are nullable, `created_at` here defaults to `CURRENT_TIMESTAMP`, the same as `timestamps()`.
+
 ## 6. Altering existing tables
 
 `Schema::table()` is the `ALTER TABLE` counterpart. It takes the **same** `Structure` type-hint as `Schema::create()`, so migrations need only one import:

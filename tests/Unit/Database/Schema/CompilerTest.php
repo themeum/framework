@@ -463,6 +463,32 @@ class CompilerTest extends TestCase
         );
     }
 
+    public function test_datetimes_adds_created_at_and_updated_at_datetime_columns(): void
+    {
+        $structure = $this->make_alter_structure('posts', ['prefix' => 'wp_']);
+        $structure->datetimes();
+
+        $this->assertSame(
+            'ALTER TABLE `wp_posts` '
+            . 'ADD COLUMN `created_at` datetime not null default CURRENT_TIMESTAMP, '
+            . 'ADD COLUMN `updated_at` datetime null',
+            $structure->get_table_structure()
+        );
+    }
+
+    public function test_datetimes_applies_precision_to_both_columns(): void
+    {
+        $structure = $this->make_alter_structure('posts', ['prefix' => 'wp_']);
+        $structure->datetimes(6);
+
+        $this->assertSame(
+            'ALTER TABLE `wp_posts` '
+            . 'ADD COLUMN `created_at` datetime(6) not null default CURRENT_TIMESTAMP(6), '
+            . 'ADD COLUMN `updated_at` datetime(6) null',
+            $structure->get_table_structure()
+        );
+    }
+
     public function test_alter_preserves_use_current_default_handling(): void
     {
         $structure = $this->make_alter_structure('posts', ['prefix' => 'wp_']);

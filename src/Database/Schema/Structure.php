@@ -359,6 +359,24 @@ class Structure
     }
 
     /**
+     * Add 'created_at' and 'updated_at' datetime columns.
+     *
+     * DATETIME avoids TIMESTAMP's 2038 upper bound and its session time zone
+     * conversion, storing the value exactly as written.
+     *
+     * @param int $precision The precision for the datetime columns
+     *
+     * @return void
+     *
+     * @since 1.0.0
+     */
+    public function datetimes($precision = 0)
+    {
+        $this->datetime('created_at', $precision)->use_current();
+        $this->datetime('updated_at', $precision)->nullable();
+    }
+
+    /**
      * Add an INTEGER column.
      *
      * @param string $name The column name
