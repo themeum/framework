@@ -237,7 +237,7 @@ class Response implements ArrayAccess
     }
 
     /**
-     * Determine if the response status code was a client or server error.
+     * Determine if the request failed: a transport error, or a client or server error status.
      *
      * @return bool
      *
@@ -245,7 +245,7 @@ class Response implements ArrayAccess
      */
     public function failed()
     {
-        return $this->server_error() || $this->client_error();
+        return is_wp_error($this->response) || $this->server_error() || $this->client_error();
     }
 
     /**

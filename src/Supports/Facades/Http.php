@@ -41,6 +41,7 @@ use Framework\Facade;
  * @method static \Framework\Http\Client\Request method(string $method)
  * @method static \Framework\Http\Client\Request attach(string $name, string $content, ?string $filename = null, array $headers = [])
  * @method static \Framework\Http\Client\Request macro($name, callable $macro)
+ * @method static array pool(callable $callback, array $options = [])
  * @see    \Framework\Http\Client\Request
  */
 
