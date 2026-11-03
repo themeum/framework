@@ -13,6 +13,7 @@ namespace Framework\Http\Client;
 defined('ABSPATH') || exit;
 
 use BadMethodCallException;
+use InvalidArgumentException;
 use Framework\Http\Cookie;
 use Framework\Supports\Arr;
 use Framework\Supports\Str;
@@ -717,6 +718,51 @@ class Request
     }
 
     /**
+     * Send several requests concurrently and return their responses.
+     *
+     * The callback receives a Pool. Each $pool->as($key) or $pool->method() call starts
+     * a fresh request that does not inherit this request's settings. Verb methods on a
+     * pooled request record it; the pool sends everything once the callback returns.
+     *
+     * @param callable $callback Receives the Pool to add requests to.
+     * @param array $options Pool options: 'concurrency', the maximum requests in flight (default 10).
+     *
+     * @return array<string|int, Response>
+     *
+     * @throws \InvalidArgumentException When the concurrency is not a positive integer.
+     *
+     * @since 3.3.0
+     */
+    public function pool(callable $callback, array $options = [])
+    {
+        $concurrency = $options['concurrency'] ?? Pool::DEFAULT_CONCURRENCY;
+
+        throw_unless(
+            is_int($concurrency) && $concurrency >= 1,
+            'The pool concurrency must be a positive integer.',
+            InvalidArgumentException::class
+        );
+
+        $pool = $this->new_pool();
+
+        $callback($pool);
+
+        return $pool->send($concurrency);
+    }
+
+    /**
+     * Create a new pool.
+     *
+     * @return Pool
+     *
+     * @since 3.3.0
+     */
+    protected function new_pool()
+    {
+        return new Pool();
+    }
+
+    /**
      * Send a request.
      *
      * @param string $method The method name.
@@ -725,11 +771,32 @@ class Request
      *
      * @return Response
      *
-     * @throws \RuntimeException
-     *
      * @since 1.0.0
      */
     protected function send_request(string $method, string $url, array $options = [])
+    {
+        [$url, $args] = $this->build_request($method, $url, $options);
+
+        return $this->dispatch($url, $args);
+    }
+
+    /**
+     * Build the final URL and the arguments the WordPress HTTP layer receives.
+     *
+     * Kept apart from dispatch so a pooled request is built by exactly the same
+     * code as a single one and only the sending differs.
+     *
+     * @param string $method The method name.
+     * @param string $url The url.
+     * @param array $options The options array.
+     *
+     * @return array
+     *
+     * @throws \RuntimeException
+     *
+     * @since 3.3.0
+     */
+    protected function build_request(string $method, string $url, array $options = [])
     {
         throw_unless(
             $this->is_valid_method($method),
@@ -742,9 +809,22 @@ class Request
         $body = $this->prepare_request_body($method, $data);
         $args = $this->prepare_request_args($body);
 
-        $response = wp_remote_request($url, $args);
+        return [$url, $args];
+    }
 
-        return $this->new_response($response);
+    /**
+     * Dispatch a built request through the WordPress HTTP API.
+     *
+     * @param string $url The final url.
+     * @param array $args The request arguments.
+     *
+     * @return Response
+     *
+     * @since 3.3.0
+     */
+    protected function dispatch(string $url, array $args)
+    {
+        return $this->new_response(wp_remote_request($url, $args));
     }
 
     /**

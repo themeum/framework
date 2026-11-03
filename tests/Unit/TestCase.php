@@ -29,8 +29,19 @@ abstract class TestCase extends BaseTestCase
         $this->reset_test_wpdb();
         $this->reset_route_state();
         $this->reset_facade_cache();
+        $this->reset_wordpress_hooks();
 
         parent::tearDown();
+    }
+
+    protected function reset_wordpress_hooks(): void
+    {
+        unset(
+            $GLOBALS['framework_test_filters'],
+            $GLOBALS['framework_test_did_actions'],
+            $GLOBALS['framework_test_remote_requests'],
+            $GLOBALS['framework_test_remote_response']
+        );
     }
 
     protected static function framework_path(): string

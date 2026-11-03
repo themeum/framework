@@ -25,6 +25,8 @@ require_once $autoload;
 
 require_once dirname(__DIR__) . '/Support/StubsWordPressFunctions.php';
 
+require_once dirname(__DIR__) . '/Support/StubsWordPressHttp.php';
+
 require_once $framework_dir . '/vendor/yoast/phpunit-polyfills/phpunitpolyfills-autoload.php';
 
 define('FRAMEWORK_UNIT_TESTS', true);
