@@ -5,6 +5,20 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.1]
+
+### Added
+
+- A per-store `version_scoped` cache setting (default `false`). A store with
+  `'version_scoped' => true` starts cold when the application version changes:
+  the first request on the new version that uses the store flushes it once,
+  through the ordinary `flush()`, so superseded entries are still queued for the
+  scheduled sweep. A store with no recorded version counts as changed. Turn it on
+  for stores that hold values whose shape your own code produces, so that an
+  update never reads an entry written in the previous release's shape. Every
+  `database` store, and every `file` store on the default path, shares one
+  namespace, so scoping one flushes all of them. See `docs/cache.md`.
+
 ## [3.3.0]
 
 ### Added
