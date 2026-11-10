@@ -32,6 +32,7 @@ abstract class CacheTestCase extends TestCase
         $GLOBALS['framework_test_transients'] = [];
         $GLOBALS['framework_test_site_transients'] = [];
         $GLOBALS['framework_test_options'] = [];
+        $GLOBALS['framework_test_option_autoload'] = [];
         $GLOBALS['framework_test_site_options'] = [];
         $GLOBALS['framework_test_ext_object_cache'] = false;
         $GLOBALS['framework_test_object_cache'] = [];

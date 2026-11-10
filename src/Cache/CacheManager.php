@@ -78,6 +78,8 @@ class CacheManager
 
         if (!isset($this->stores[$name])) {
             $this->stores[$name] = $this->resolve($name);
+
+            $this->scope_to_application_version($this->stores[$name]);
         }
 
         return $this->stores[$name];
@@ -227,19 +229,21 @@ class CacheManager
 
         return [
             'database' => [
-                'driver'      => 'database',
-                'forever_ttl' => 10 * $year,
-                'network'     => false,
-                'gc'          => 'daily',
-                'events'      => true,
+                'driver'         => 'database',
+                'forever_ttl'    => 10 * $year,
+                'network'        => false,
+                'gc'             => 'daily',
+                'events'         => true,
+                'version_scoped' => false,
             ],
             'file' => [
-                'driver'   => 'file',
-                'path'     => null,
-                'fallback' => 'database',
-                'gc'       => 'daily',
-                'network'  => false,
-                'events'   => true,
+                'driver'         => 'file',
+                'path'           => null,
+                'fallback'       => 'database',
+                'gc'             => 'daily',
+                'network'        => false,
+                'events'         => true,
+                'version_scoped' => false,
             ],
             'array' => [
                 'driver'  => 'array',
@@ -285,6 +289,78 @@ class CacheManager
             sprintf('Unsupported cache driver [%s] for store [%s].', (string) $driver, $name),
             InvalidArgumentException::class
         );
+    }
+
+    /**
+     * Start a version scoped store over when the application version has changed.
+     *
+     * Such a store holds values whose shape the application's own code produces, so an entry
+     * written by an earlier release may not be readable by this one. A flush rather than a
+     * version in the key prefix is used because flush() already queues the old namespace for
+     * gc() and removes the file store's directory, where a moved prefix would orphan both. A
+     * missing recorded version counts as a change, since a site upgrading from a framework
+     * without this setting may hold entries in an old shape. The version is recorded only after
+     * a successful flush, so a failed one is retried on the next request.
+     *
+     * The store name is taken from the repository rather than from the caller, because a file
+     * store that diverts to its fallback hands back the fallback's repository, and the fallback's
+     * own configuration then governs.
+     *
+     * @param Repository $repository The repository that was just resolved.
+     *
+     * @return void
+     *
+     * @since 3.3.1
+     */
+    protected function scope_to_application_version(Repository $repository)
+    {
+        $name = $repository->get_name();
+        $config = $this->store_config($name);
+
+        if (($config['version_scoped'] ?? false) !== true) {
+            return;
+        }
+
+        $app = app();
+
+        if (!method_exists($app, 'version')) {
+            return;
+        }
+
+        $version = (string) $app->version();
+        $option = $this->application_version_option($name);
+        $network = (bool) ($config['network'] ?? false);
+        $recorded = $network ? get_site_option($option, null) : get_option($option, null);
+
+        if (!is_null($recorded) && (string) $recorded === $version) {
+            return;
+        }
+
+        if (!$repository->flush()) {
+            return;
+        }
+
+        if ($network) {
+            update_site_option($option, $version);
+
+            return;
+        }
+
+        update_option($option, $version, true);
+    }
+
+    /**
+     * Get the option name holding the application version a store was last flushed for.
+     *
+     * @param string $name The store name.
+     *
+     * @return string
+     *
+     * @since 3.3.1
+     */
+    protected function application_version_option(string $name)
+    {
+        return $this->prefix() . 'cache_app_version_' . $name;
     }
 
     /**
