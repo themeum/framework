@@ -742,6 +742,7 @@ if (!function_exists('update_option')) {
         }
 
         $GLOBALS['framework_test_options'][$name] = $value;
+        $GLOBALS['framework_test_option_autoload'][$name] = $autoload;
 
         return true;
     }

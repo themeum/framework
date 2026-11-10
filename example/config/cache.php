@@ -83,6 +83,21 @@ return [
              * this on costs almost nothing.
              */
             'events' => true,
+
+            /*
+             * When true, the store starts over whenever the application
+             * version changes: the first request on the new version that uses
+             * the store flushes it once. A store with no recorded version
+             * counts as changed, so turning this on flushes once too.
+             *
+             * Turn this on for stores holding values whose shape your own code
+             * produces, so an update that changes the shape never reads an
+             * entry written by the previous release. The cost is a cold cache
+             * after every update. Every database store shares one namespace,
+             * so this flushes all of them, and the rate limiter's counts start
+             * again if it counts in one of them.
+             */
+            'version_scoped' => false,
         ],
 
         /*
@@ -123,6 +138,21 @@ return [
 
             'network' => false,
             'events' => true,
+
+            /*
+             * When true, the store starts over whenever the application
+             * version changes: the first request on the new version that uses
+             * the store flushes it once. A store with no recorded version
+             * counts as changed, so turning this on flushes once too.
+             *
+             * Turn this on for stores holding values whose shape your own code
+             * produces, so an update that changes the shape never reads an
+             * entry written by the previous release. The cost is a cold cache
+             * after every update. Every file store on the default path shares
+             * one directory, so this flushes all of them, and the rate
+             * limiter's counts start again if it counts in one of them.
+             */
+            'version_scoped' => false,
         ],
 
         /*

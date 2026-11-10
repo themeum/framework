@@ -291,18 +291,20 @@ return [
     'allowed_classes' => [],         // extra classes the persistent drivers may store
     'stores'          => [
         'database' => [
-            'driver'      => 'database',
-            'forever_ttl' => 10 * YEAR_IN_SECONDS,
-            'network'     => false,
-            'gc'          => 'daily',  // false disables the flush cleanup sweep
-            'events'      => true,
+            'driver'         => 'database',
+            'forever_ttl'    => 10 * YEAR_IN_SECONDS,
+            'network'        => false,
+            'gc'             => 'daily',  // false disables the flush cleanup sweep
+            'events'         => true,
+            'version_scoped' => false,    // true starts the store cold on each app version change
         ],
         'file' => [
-            'driver'   => 'file',
-            'path'     => null,        // null derives one beneath uploads
-            'fallback' => 'database',
-            'gc'       => 'daily',     // false disables the sweep
-            'events'   => true,
+            'driver'         => 'file',
+            'path'           => null,     // null derives one beneath uploads
+            'fallback'       => 'database',
+            'gc'             => 'daily',  // false disables the sweep
+            'events'         => true,
+            'version_scoped' => false,    // true starts the store cold on each app version change
         ],
         'array' => ['driver' => 'array', 'events' => false],
     ],
@@ -322,6 +324,37 @@ The classes the `database` and `file` drivers may store, on top of the built-in 
 ```
 
 It applies to every store rather than per store, because a `file` store can silently divert to its `fallback`. A value must not be accepted by one and refused by the other. The list is only ever read from configuration, never from stored data.
+
+### `version_scoped`
+
+A store with `'version_scoped' => true` starts cold whenever the application version changes. Turn it on for a store that holds values whose **shape your own code produces**, such as a remote JSON list after your plugin normalizes it. Without it, an update that changes that shape reads entries written by the previous release under the same key. In one real case, 1.0.1 read a list cached by 1.0.0 that had no `slug` field, and the WordPress update check crashed with a `TypeError`.
+
+```php
+'stores' => [
+    'database' => [
+        'driver'         => 'database',
+        'version_scoped' => true,
+    ],
+],
+```
+
+How it works:
+
+- The first time a request uses the store, the framework compares `app()->version()` with the version recorded in the option `<prefix>cache_app_version_<store name>`. This is a network-wide site option when the store has `'network' => true`.
+- If the two differ, the store is flushed with the ordinary `flush()`, and the new version is recorded. A downgrade counts as a change.
+- A **missing** recorded version also counts as a change. So the first request after you turn the setting on, or after upgrading from a framework release without it, flushes once.
+- The check runs at most once per store per request, and only in requests that use the store. The option is autoloaded, so reading it costs no query.
+- The version is recorded only when `flush()` succeeds, so a failed flush is retried on the next request.
+- A `file` store that diverts to its `fallback` is checked under the fallback's name, using the fallback's `version_scoped` setting.
+- It has no effect on the `array` store, which lives for one request anyway.
+
+What it costs:
+
+- **Every update starts with a cold cache.** Only turn it on for entries you can rebuild from their source. Leave it off for any store that holds values you cannot recreate.
+- **The flush reaches every store that shares the namespace.** Every `database` store is namespaced by the application prefix alone, not by store name, and so is every `file` store on the default path. Scoping one of them therefore empties all of them.
+- **Rate-limiter counts start again.** This happens when `cache.limiter` is `null` (the limiter counts in the default store), or when the limiter's store shares the namespace with a scoped store, as the previous point describes. To keep counts across an update, give the limiter a store on a different backend.
+
+The flush goes through the store's normal `flush()`, not a version suffix in the key prefix. That keeps the superseded entries in the scheduled sweep described in [section 9](#9-the-drivers): a moved prefix would strand the `database` driver's stale-version queue, and every `forever()` row and `file` directory with it.
 
 ---
 
@@ -343,7 +376,7 @@ To share a store across an entire network, set `'network' => true`. Its entries 
 
 ## 13. Where this differs from Laravel
 
-Five deliberate divergences, each forced by WordPress:
+Six deliberate divergences, each forced by WordPress:
 
 **`forever()` uses a long finite lifetime.** WordPress marks a transient with no expiry as an *autoloaded* option, and skips its own 150,000-byte autoload guard when doing so — so a large `forever()` value would be read and unserialized on every request, at a cost paid before your code runs and therefore nearly undiagnosable. The entry never logically expires as far as the cache API is concerned, while the underlying transient is given a ten-year lifetime so WordPress leaves it out of autoload. Set `forever_ttl` to `0` for literal never-expiry. Note that Laravel does not treat `forever` as durable either — its own documentation warns that Memcached may evict such entries.
 
@@ -354,6 +387,8 @@ Five deliberate divergences, each forced by WordPress:
 **Only allowed classes can be cached.** Laravel serializes whatever you give it. Here the `database` and `file` drivers store JSON and restore only built-in types and the classes in `allowed_classes`; anything else throws when written. WordPress.org rejects plugins that call `unserialize()` without disabling object creation, and that rule is what closes off PHP object injection through a tampered cache entry. See [section 9](#what-the-persistent-drivers-can-store).
 
 **`flush()` advances a namespace version.** Necessary because transients cannot be enumerated under an object cache. The practical effect is the same — every prior key reads as a miss — and it takes constant time. Reclaiming the rows a version leaves behind happens later, off the request that called `flush()`, in the same scheduled sweep described in [section 9](#9-the-drivers).
+
+**`version_scoped` has no Laravel counterpart.** Laravel leaves invalidating a cache on deploy to the deploy process (`php artisan cache:clear`). A WordPress plugin update has no such step, so the framework provides one. See [section 10](#version_scoped).
 
 `Cache::lock()` **does** exist — see [section 15](#15-locks) — though only the acquire, release and callback forms; `block()`, `funnel()` and `without_overlapping()` do not. Absent by design: tagged cache (`supports_tags()` returns `false`), the `failover` driver, `sear`, and `rememberWithWarmth`.
 
