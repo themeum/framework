@@ -5,6 +5,7 @@ use Example\App\Events\SampleEvent;
 use Example\App\Http\Controllers\BlogController;
 use Example\App\Http\Controllers\EventsController;
 use Example\App\Http\Controllers\SpeakersController;
+use Example\App\Http\Controllers\TestController;
 use Example\App\Http\Requests\ExampleRequest;
 use Example\App\Models\Blog;
 use Example\App\Models\Event;
@@ -90,3 +91,6 @@ Route::get('/check', function (Request $request) {
         'cached' => Cache::get('sample'),
     ]);
 })->throttle(5, 1);
+
+
+Route::get('/new-route', [TestController::class, 'get']);

@@ -2,6 +2,7 @@
 
 namespace Example\App\Providers;
 
+use Example\App\Services\TestService;
 use Framework\Http\Request;
 use Framework\RateLimiting\Limit;
 use Framework\ServiceProvider;
@@ -14,6 +15,7 @@ class TestServiceProvider extends ServiceProvider
     public function register()
     {
         $config = config('app.name');
+        $this->app->singleton(TestService::class);
     }
 
     public function boot()
