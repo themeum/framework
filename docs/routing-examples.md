@@ -100,6 +100,37 @@ public function show(EventShowRequest $request, Event $event, EventService $serv
 
 **Expected:** `GET /wp-json/kirki/v1/events/42` resolves `{event}` from the route, authorizes/validates via the Form Request, and returns JSON.
 
+### Controller constructor injection
+
+Controllers are built by the application container, the same way as `app()->make()`. A constructor therefore gets bindings, singletons, interfaces bound in the container, and the default value of any scalar parameter, just as action-method parameters do:
+
+```php
+use function Framework\app;
+
+// In a service provider
+app()->singleton(Cart::class, fn () => new Cart());
+app()->bind(PaymentGateway::class, fn () => new StripeGateway());
+
+class CartController
+{
+    protected $cart;
+
+    public function __construct(Cart $cart, PaymentGateway $gateway, int $limit = 10)
+    {
+        $this->cart = $cart;
+    }
+
+    public function add(CartAddRequest $request, Cart $cart)
+    {
+        // $this->cart and $cart are the same singleton
+    }
+}
+```
+
+A controller is built fresh on every dispatch. To share one instance across dispatches in the same PHP process (for example REST batch requests), bind the controller itself with `app()->singleton(CartController::class)`.
+
+**Expected:** The constructor and the action method receive the same `Cart` instance, `$gateway` is a `StripeGateway`, and `$limit` is `10`.
+
 ---
 
 
