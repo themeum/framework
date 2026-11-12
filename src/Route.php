@@ -30,7 +30,6 @@ use Framework\Routing\SiteRouter;
 use Framework\View\View;
 use Framework\Wordpress\Constants\HookNames;
 use InvalidArgumentException;
-use ReflectionClass;
 use ReflectionFunction;
 use ReflectionMethod;
 use ReflectionNamedType;
@@ -225,15 +224,6 @@ class Route
      * @since 1.0.0
      */
     protected $param_types = [];
-
-    /**
-     * Array of class instances.
-     *
-     * @var array
-     *
-     * @since 1.0.0
-     */
-    protected static $instances = [];
 
     /**
      * The resolved request.
@@ -1141,127 +1131,21 @@ class Route
     }
 
     /**
-     * Cache a class instance.
+     * Resolve a class through the application container.
      *
-     * @param string $abstract The class name to bind
-     * @param object $instance The instance of the class
+     * Controllers are built here, so their constructor dependencies follow the same bindings,
+     * singletons and defaults as every other service the container resolves.
      *
-     * @return void
-     *
-     * @since 1.0.0
-     */
-    protected function cache(string $abstract, $instance)
-    {
-        static::$instances[$abstract] = $instance;
-    }
-
-    /**
-     * Check if a class instance is cached.
-     *
-     * @param string $abstract The class name to check
-     *
-     * @return bool
-     *
-     * @since 1.0.0
-     */
-    protected function is_cached(string $abstract)
-    {
-        return isset(static::$instances[$abstract]);
-    }
-
-    /**
-     * Get a cached class instance.
-     *
-     * @param string $abstract The class name to get
-     *
-     * @return object
-     *
-     * @since 1.0.0
-     */
-    protected function get_cached(string $abstract)
-    {
-        return static::$instances[$abstract];
-    }
-
-    /**
-     * Resolve a class and its dependencies.
-     *
-     * @param string $abstract The class name to resolve
-     * @param array $resolving Stack of classes being resolved (for
+     * @param string $abstract The class name to resolve.
+     * @param array $resolving Unused; kept so subclasses that call or override this keep a compatible signature.
      *
      * @return object The resolved instance
-     *
-     * @throws \Exception
      *
      * @since 1.0.0
      */
     protected function make(string $abstract, array $resolving = [])
     {
-        if ($this->is_cached($abstract)) {
-            return $this->get_cached($abstract);
-        }
-
-        throw_if(
-            in_array($abstract, $resolving, true),
-            sprintf('Circular dependency detected for class "%s".', $abstract),
-            Exception::class
-        );
-
-        throw_unless(class_exists($abstract), sprintf('Class "%s" does not exist.', $abstract));
-
-        $reflector = new ReflectionClass($abstract);
-
-        throw_if(
-            $reflector->isAbstract(),
-            sprintf('Class "%s" is abstract and cannot be instantiated.', $abstract),
-            Exception::class
-        );
-
-        $constructor = $reflector->getConstructor();
-
-        if (!$constructor) {
-            return new $abstract();
-        }
-
-        throw_unless(
-            $constructor->isPublic(),
-            sprintf('Class "%s" has a non-public constructor and cannot be instantiated.', $abstract),
-            Exception::class
-        );
-
-        $dependencies = [];
-        $resolving[] = $abstract;
-
-        foreach ($constructor->getParameters() as $parameter) {
-            $type = $parameter->getType();
-
-            throw_unless(
-                $type !== null,
-                sprintf(
-                    'Parameter "%s" is missing a type hint in the constructor. Please add a class type hint.',
-                    $parameter->getName()
-                ),
-                Exception::class
-            );
-
-            throw_if(
-                $type->isBuiltin(),
-                sprintf(
-                    'Parameter "%s" must be a class type, not a built-in type. Please specify a valid class dependency.', // phpcs:ignore Generic.Files.LineLength.TooLong
-                    $parameter->getName()
-                ),
-                Exception::class
-            );
-
-            $dependencies[] = $this->is_cached($type->getName())
-                ? $this->get_cached($type->getName())
-                : $this->make($type->getName(), $resolving);
-        }
-
-        $instance = $reflector->newInstanceArgs($dependencies);
-        $this->cache($abstract, $instance);
-
-        return $instance;
+        return app()->make($abstract);
     }
 
     /**

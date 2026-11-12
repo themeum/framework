@@ -9,6 +9,8 @@ use Framework\Http\Request;
 use Framework\Route;
 use WP_REST_Request;
 
+use function Framework\app;
+
 class RouteDiTest extends TestCase
 {
     protected function setUp(): void
@@ -48,7 +50,7 @@ class RouteDiTest extends TestCase
         $this->assertSame('products/(?P<id>[0-9]+)', $formatted);
     }
 
-    public function test_make_resolves_constructor_dependencies_and_caches_instances(): void
+    public function test_make_resolves_constructor_dependencies_fresh_on_each_call(): void
     {
         $route = Route::get('ping', [RouteDiTestController::class, 'show']);
 
@@ -56,8 +58,78 @@ class RouteDiTest extends TestCase
         $second = $this->invoke_route_method($route, 'make', RouteDiServiceWithDependency::class);
 
         $this->assertInstanceOf(RouteDiServiceWithDependency::class, $first);
+        $this->assertInstanceOf(RouteDiLeafService::class, $first->leaf);
+        $this->assertNotSame($first, $second);
+        $this->assertNotSame($first->leaf, $second->leaf);
+    }
+
+    public function test_controller_constructor_and_action_share_container_singleton(): void
+    {
+        $this->bootstrap_application();
+        app()->singleton(RouteDiCart::class, fn () => new RouteDiCart());
+
+        $route = Route::get('cart', [RouteDiCartController::class, 'add']);
+        $rest_request = new WP_REST_Request('GET', '/framework/v1/cart');
+        $this->invoke_route_method($route, 'resolve_permission_callback', $rest_request);
+
+        $callback = $this->invoke_route_method($route, 'resolve_route');
+        $result = $callback($rest_request);
+
+        $this->assertIsArray($result);
+        $this->assertSame($result['constructor'], $result['action']);
+        $this->assertSame(app()->make(RouteDiCart::class), $result['constructor']);
+    }
+
+    public function test_make_resolves_constructor_interface_bound_in_container(): void
+    {
+        app()->bind(RouteDiGateway::class, fn () => new RouteDiStripeGateway());
+        $route = Route::get('pay', [RouteDiPaymentController::class, 'show']);
+
+        $controller = $this->invoke_route_method($route, 'make', RouteDiPaymentController::class);
+
+        $this->assertInstanceOf(RouteDiStripeGateway::class, $controller->gateway);
+    }
+
+    public function test_make_resolves_constructor_service_built_by_container_closure(): void
+    {
+        app()->singleton(RouteDiShippingService::class, fn () => new RouteDiShippingService(['zone' => 'eu']));
+        $route = Route::get('shipping', [RouteDiShippingController::class, 'show']);
+
+        $controller = $this->invoke_route_method($route, 'make', RouteDiShippingController::class);
+
+        $this->assertSame(app()->make(RouteDiShippingService::class), $controller->shipping);
+        $this->assertSame(['zone' => 'eu'], $controller->shipping->settings);
+    }
+
+    public function test_make_uses_default_for_scalar_constructor_parameter(): void
+    {
+        $route = Route::get('limit', [RouteDiLimitController::class, 'show']);
+
+        $controller = $this->invoke_route_method($route, 'make', RouteDiLimitController::class);
+
+        $this->assertInstanceOf(RouteDiLeafService::class, $controller->leaf);
+        $this->assertSame(10, $controller->limit);
+    }
+
+    public function test_make_reuses_controller_bound_as_singleton(): void
+    {
+        app()->singleton(RouteDiLimitController::class);
+        $route = Route::get('limit', [RouteDiLimitController::class, 'show']);
+
+        $first = $this->invoke_route_method($route, 'make', RouteDiLimitController::class);
+        $second = $this->invoke_route_method($route, 'make', RouteDiLimitController::class);
+
         $this->assertSame($first, $second);
-        $this->assertSame($first->leaf, $second->leaf);
+    }
+
+    public function test_make_does_not_share_unbound_dependency_between_controllers(): void
+    {
+        $route = Route::get('ping', [RouteDiTestController::class, 'show']);
+
+        $first = $this->invoke_route_method($route, 'make', RouteDiReportController::class);
+        $second = $this->invoke_route_method($route, 'make', RouteDiExportController::class);
+
+        $this->assertNotSame($first->reports, $second->reports);
     }
 
     public function test_make_detects_circular_dependencies(): void
@@ -250,5 +322,120 @@ class RouteDiCircularB
 {
     public function __construct(RouteDiCircularA $dependency)
     {
+    }
+}
+
+class RouteDiCart
+{
+}
+
+class RouteDiCartController
+{
+    public RouteDiCart $cart;
+
+    public function __construct(RouteDiCart $cart)
+    {
+        $this->cart = $cart;
+    }
+
+    public function add(RequestContract $request, RouteDiCart $cart)
+    {
+        return ['constructor' => $this->cart, 'action' => $cart];
+    }
+}
+
+interface RouteDiGateway
+{
+}
+
+class RouteDiStripeGateway implements RouteDiGateway
+{
+}
+
+class RouteDiPaymentController
+{
+    public RouteDiGateway $gateway;
+
+    public function __construct(RouteDiGateway $gateway)
+    {
+        $this->gateway = $gateway;
+    }
+
+    public function show(RequestContract $request)
+    {
+        return $request;
+    }
+}
+
+class RouteDiShippingService
+{
+    public array $settings;
+
+    public function __construct(array $settings)
+    {
+        $this->settings = $settings;
+    }
+}
+
+class RouteDiShippingController
+{
+    public RouteDiShippingService $shipping;
+
+    public function __construct(RouteDiShippingService $shipping)
+    {
+        $this->shipping = $shipping;
+    }
+
+    public function show(RequestContract $request)
+    {
+        return $request;
+    }
+}
+
+class RouteDiLimitController
+{
+    public RouteDiLeafService $leaf;
+
+    public int $limit;
+
+    public function __construct(RouteDiLeafService $leaf, int $limit = 10)
+    {
+        $this->leaf = $leaf;
+        $this->limit = $limit;
+    }
+
+    public function show(RequestContract $request)
+    {
+        return $request;
+    }
+}
+
+class RouteDiReportService
+{
+    public RouteDiLeafService $leaf;
+
+    public function __construct(RouteDiLeafService $leaf)
+    {
+        $this->leaf = $leaf;
+    }
+}
+
+class RouteDiReportController
+{
+    public RouteDiReportService $reports;
+
+    public function __construct(RouteDiReportService $reports)
+    {
+        $this->reports = $reports;
+    }
+}
+
+class RouteDiExportController
+{
+    public RouteDiReportService $reports;
+
+    public function __construct(RouteDiReportService $reports)
+    {
+        $this->reports = $reports;
     }
 }

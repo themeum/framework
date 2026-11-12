@@ -213,7 +213,6 @@ abstract class TestCase extends BaseTestCase
             'routes' => [],
             'named_routes' => [],
             'group_stack' => [],
-            'instances' => [],
             'site_router' => null,
             'with_site_route' => false,
         ];

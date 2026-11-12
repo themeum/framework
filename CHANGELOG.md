@@ -5,6 +5,24 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.2]
+
+### Fixed
+
+- Route controllers are now built by the application container. Constructor
+  dependencies follow the same rules as action-method parameters: bindings,
+  singletons, interfaces bound in the container, and default values for scalar
+  parameters. Previously `Route` built controllers with its own injector, which
+  ignored the container. A singleton injected into the constructor was then a
+  different object from the same singleton injected into the action, a bound
+  interface failed with `Class "..." does not exist`, a scalar parameter failed
+  even when it had a default, and unbound services were shared between unrelated
+  controllers. A controller is now built fresh on each dispatch; bind it with
+  `app()->singleton()` to share one instance. `Route::make()` keeps its signature
+  and delegates to the container. The protected static cache it used is removed:
+  `Route::$instances`, `cache()`, `is_cached()` and `get_cached()`. See
+  `docs/routing-examples.md`.
+
 ## [3.3.1]
 
 ### Added
