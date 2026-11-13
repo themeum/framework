@@ -207,13 +207,16 @@ class MessagesBag
     /**
      * Get the messages.
      *
+     * App defined messages are merged recursively, so overriding one message keeps every default
+     * beside it instead of replacing its whole group.
+     *
      * @return array
      *
      * @since 1.0.0
      */
     protected function messages()
     {
-        return array_merge(
+        return array_replace_recursive(
             $this->defaults(),
             $this->app_defined_messages(),
         );
@@ -221,6 +224,9 @@ class MessagesBag
 
     /**
      * Get a message by key.
+     *
+     * Reads the table built by the constructor; the app-defined part comes from config(), which is
+     * already cached for the request, so rebuilding it per call could not change the result.
      *
      * @param string $key The key.
      * @param mixed $args The arguments.
@@ -232,7 +238,7 @@ class MessagesBag
     public function get(string $key, ...$args)
     {
         $args = !empty($args) ? Arr::flatten($args) : [];
-        $message = Arr::get($this->messages(), $key, '');
+        $message = Arr::get($this->messages, $key, '');
 
         throw_if(is_array($message), 'You may forget to define the full path of the message key.', InvalidArgumentException::class);
 

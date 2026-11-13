@@ -10,6 +10,7 @@ use Example\App\Http\Requests\ExampleRequest;
 use Example\App\Models\Blog;
 use Example\App\Models\Event;
 use Example\App\Resources\TestResource;
+use Example\App\Services\ValidationStressService;
 use Framework\Http\Request;
 use Framework\Middlewares\AdminMiddleware;
 use Framework\Middlewares\AuthMiddleware;
@@ -94,3 +95,19 @@ Route::get('/check', function (Request $request) {
 
 
 Route::get('/new-route', [TestController::class, 'get']);
+
+/*
+ * Validator stress test. Public, no middleware.
+ *
+ * Validates a product with many variants against a wide rule set that uses
+ * wildcard and nested wildcard keys, and reports timings and errors.
+ *
+ *   GET /wp-json/framework/v1/validation-stress?variants=180
+ *   GET /wp-json/framework/v1/validation-stress?variants=500&invalid=1
+ */
+Route::get('/validation-stress', function (Request $request, ValidationStressService $stress) {
+    $variants = max(1, min(2000, (int) $request->get('variants', 180, 'int')));
+    $invalid = (bool) $request->get('invalid', false, 'bool');
+
+    return response()->json($stress->run($variants, $invalid));
+});

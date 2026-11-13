@@ -80,6 +80,15 @@ class Validator
     protected bool $stop_on_first_failure = false;
 
     /**
+     * The outcome of the last run, or null when the rules have not run against the current state.
+     *
+     * @var bool|null
+     *
+     * @since 1.0.0
+     */
+    protected ?bool $passed = null;
+
+    /**
      * Create a new validator instance.
      *
      * @param array $data The data to validate.
@@ -157,16 +166,34 @@ class Validator
     /**
      * Set the value of an attribute.
      *
+     * Discards the stored outcome and errors, so the next check validates the changed data.
+     *
      * @param string $attribute The attribute to set the value of.
      * @param mixed $value The value to set.
      *
      * @return void
-     * 
+     *
      * @since 1.0.0
      */
     public function set_value($attribute, $value)
     {
         Arr::set($this->data, $attribute, $value);
+        $this->reset_outcome();
+    }
+
+    /**
+     * Discard the stored outcome and errors so the next check runs the rules again.
+     *
+     * A subclass that writes $this->data or $this->rules directly must call this.
+     *
+     * @return void
+     *
+     * @since 1.0.0
+     */
+    protected function reset_outcome()
+    {
+        $this->passed = null;
+        $this->errors = [];
     }
 
     /**
@@ -196,12 +223,19 @@ class Validator
     /**
      * Validate the data.
      *
+     * The rules run once; later calls return the stored outcome until set_value() or sometimes()
+     * changes what is being checked.
+     *
      * @return bool
-     * 
+     *
      * @since 1.0.0
      */
     public function passes()
     {
+        if ($this->passed !== null) {
+            return $this->passed;
+        }
+
         foreach ($this->rules as $key => $rules) {
             if ($this->stop_on_first_failure && !empty($this->errors())) {
                 break;
@@ -210,7 +244,7 @@ class Validator
             $this->validate_rules($key, $rules);
         }
 
-        return empty($this->errors());
+        return $this->passed = empty($this->errors());
     }
 
     /**
@@ -323,6 +357,8 @@ class Validator
     /**
      * Check if the validation failed.
      *
+     * Shares the stored outcome with passes(), so it does not run the rules a second time.
+     *
      * @return bool
      * 
      * @since 1.0.0
@@ -363,17 +399,15 @@ class Validator
     /**
      * Get the validated data.
      *
+     * Runs the rules only if they have not run against the current state.
+     *
      * @return array
-     * 
+     *
      * @since 1.0.0
      */
     public function validated()
     {
-        if (empty($this->errors())) {
-            $this->passes();
-        }
-
-        if (!empty($this->errors())) {
+        if (!$this->passes()) {
             throw_exception(ValidationException::with_errors($this->errors()));
         }
 
@@ -420,6 +454,9 @@ class Validator
     /**
      * Sometimes the rules should be applied.
      *
+     * When the callback adds rules, the stored outcome and errors are discarded so the next check
+     * runs the full rule set.
+     *
      * @param string $key The key to apply the rules to.
      * @param array|string $rules The rules to apply.
      * @param callable $callback The callback to check if the rules should be applied.
@@ -434,6 +471,7 @@ class Validator
             $rules = [$key => $rules];
             $rules = $this->parse_rules($rules);
             $this->rules = array_merge($this->rules, $rules);
+            $this->reset_outcome();
         }
     }
 }

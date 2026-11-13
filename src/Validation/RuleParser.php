@@ -37,6 +37,15 @@ class RuleParser
     protected array $rules;
 
     /**
+     * The rule key each concrete key was expanded from, so a wildcard entry is parsed once.
+     *
+     * @var array<string, string>
+     *
+     * @since 1.0.0
+     */
+    protected array $sources = [];
+
+    /**
      * Create a new rule parser instance.
      *
      * @param array $data The data to parse.
@@ -87,13 +96,19 @@ class RuleParser
     public function explode_wildcards()
     {
         $exploded = [];
+        $this->sources = [];
 
         foreach ($this->rules as $key => $rules) {
             if (str_contains($key, '*')) {
                 $array_rules = $this->explode_array_rule($key, $rules);
                 $exploded = array_merge($exploded, $array_rules);
+
+                foreach (array_keys($array_rules) as $concrete_key) {
+                    $this->sources[$concrete_key] = $key;
+                }
             } else {
                 $exploded[$key] = $rules;
+                $this->sources[$key] = $key;
             }
         }
 
@@ -105,6 +120,12 @@ class RuleParser
     /**
      * Build rule instances for every parsed rule definition.
      *
+     * Every concrete key expanded from one wildcard entry would parse to the same result, so the
+     * entry is parsed once: its first key takes the built instances and each later key takes
+     * shallow clones. A shallow clone is a full copy because rule instances hold only scalars and
+     * arrays, and the validator resets their per-key state before each check. A rule that gains an
+     * object property which must not be shared should implement __clone().
+     *
      * @return $this
      *
      * @since 1.0.0
@@ -112,9 +133,17 @@ class RuleParser
     public function process_rules()
     {
         $parsed = [];
+        $parsed_by_source = [];
 
         foreach ($this->rules as $key => $rules) {
-            $parsed[$key] = RuleFactory::make(
+            $source = $this->sources[$key] ?? $key;
+
+            if (isset($parsed_by_source[$source])) {
+                $parsed[$key] = array_map(fn ($rule) => clone $rule, $parsed_by_source[$source]);
+                continue;
+            }
+
+            $parsed[$key] = $parsed_by_source[$source] = RuleFactory::make(
                 $this->spread(
                     $this->make_array($rules)
                 )

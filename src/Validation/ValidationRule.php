@@ -304,6 +304,10 @@ abstract class ValidationRule extends Fluent
     /** 
      * Set the custom messages to return.
      *
+     * With no custom messages now or before, the default messages built by the constructor are
+     * exactly what recomputing would give, so the per-check lookups are skipped. A subclass whose
+     * default messages depend on the name, value, or data must override this method.
+     *
      * @param array $messages The custom messages to return.
      *
      * @return $this
@@ -312,6 +316,10 @@ abstract class ValidationRule extends Fluent
      */
     public function sync_custom_messages(array $messages)
     {
+        if ($messages === [] && $this->custom_messages === []) {
+            return $this;
+        }
+
         $this->custom_messages = $messages;
 
         $this->sync_default_messages_with_custom_messages();
