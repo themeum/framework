@@ -5,6 +5,33 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.3]
+
+### Changed
+
+- Validating large wildcard payloads is much faster. A product with 180
+  variants (5,956 keys after expansion) went from about 950 ms to about 58 ms.
+  Each rule entry is now parsed once, however many keys its `*` expands to.
+  Every expanded key still gets its own rule instances, so `get_rules()` returns
+  separate (cloned) instances per key; a rule object passed on a wildcard key
+  used to be the same object for every key.
+- A `Validator` runs its rules once. `passes()`, `fails()`, `validate()` and
+  `validated()` reuse the stored outcome until `set_value()` or `sometimes()`
+  (when it adds rules) changes what is checked. A subclass that writes
+  `$this->data` or `$this->rules` directly must call `reset_outcome()`.
+- Default messages are no longer looked up again for every check when the
+  validator has no custom messages, and `MessagesBag::get()` no longer rebuilds
+  the message table on each call. A custom rule whose default messages depend
+  on the field name, value or data must override `sync_custom_messages()`.
+
+### Fixed
+
+- `validate()` ran every rule twice.
+- Calling `fails()` and then `passes()` reported every error twice.
+- Overriding one message in `config/messages.php` replaced its whole group, so
+  every other default in it (for example every other `validator` message) came
+  back empty. App messages are now merged recursively.
+
 ## [3.3.2]
 
 ### Fixed
