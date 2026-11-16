@@ -112,6 +112,35 @@ class RouteMiddlewareTest extends TestCase
         $this->assertSame('mutated', $result);
     }
 
+    public function test_middleware_set_header_reaches_controller(): void
+    {
+        $route = Route::get('ping', [RouteMiddlewareTestHeaderController::class, 'show'])
+            ->middleware([RouteMiddlewareTestHeaderMiddleware::class]);
+
+        $rest_request = $this->make_rest_request();
+        $this->invoke_route_method($route, 'resolve_permission_callback', $rest_request);
+
+        $callback = $this->invoke_route_method($route, 'resolve_route');
+        $result = $callback($rest_request);
+
+        $this->assertSame('acme', $result);
+    }
+
+    public function test_middleware_set_header_reaches_closure(): void
+    {
+        $route = Route::get('ping', function (RequestContract $request) {
+            return $request->get_header('x_tenant');
+        })->middleware([RouteMiddlewareTestHeaderMiddleware::class]);
+
+        $rest_request = $this->make_rest_request();
+        $this->invoke_route_method($route, 'resolve_permission_callback', $rest_request);
+
+        $callback = $this->invoke_route_method($route, 'resolve_route');
+        $result = $callback($rest_request);
+
+        $this->assertSame('acme', $result);
+    }
+
     public function test_model_binding_runs_in_callback_not_permission(): void
     {
         $wpdb = $this->bootstrap_model_testing(['prefix' => 'wp_']);
@@ -270,6 +299,24 @@ class RouteMiddlewareTestMutatingMiddleware implements Middleware
         $request->middleware_marker = 'mutated';
 
         return $next($request);
+    }
+}
+
+class RouteMiddlewareTestHeaderMiddleware implements Middleware
+{
+    public function handle($request, callable $next)
+    {
+        $request->set_header('X-Tenant', 'acme');
+
+        return $next($request);
+    }
+}
+
+class RouteMiddlewareTestHeaderController
+{
+    public function show(RequestContract $request)
+    {
+        return $request->header('X-Tenant');
     }
 }
 
