@@ -53,6 +53,55 @@ interface Request
     public function get_header(string $name, $default = null);
 
     /**
+     * Set a single HTTP header on the request, replacing any existing values.
+     *
+     * @param string $name The name.
+     * @param mixed $value A scalar, an array of scalars, or null to remove the header.
+     *
+     * @return $this
+     *
+     * @throws \InvalidArgumentException When the value is neither null, a scalar, nor an array of scalars.
+     *
+     * @since 3.3.4
+     */
+    public function set_header(string $name, $value);
+
+    /**
+     * Set several HTTP headers on the request, keeping headers that are not named.
+     *
+     * @param array $headers The headers, keyed by name.
+     *
+     * @return $this
+     *
+     * @throws \InvalidArgumentException When a value is neither null, a scalar, nor an array of scalars.
+     *
+     * @since 3.3.4
+     */
+    public function with_headers(array $headers);
+
+    /**
+     * Remove an HTTP header from the request.
+     *
+     * @param string $name The name.
+     *
+     * @return $this
+     *
+     * @since 3.3.4
+     */
+    public function remove_header(string $name);
+
+    /**
+     * Determine whether the request carries an HTTP header.
+     *
+     * @param string $name The name.
+     *
+     * @return bool
+     *
+     * @since 3.3.4
+     */
+    public function has_header(string $name);
+
+    /**
      * Get all request input attributes.
      *
      * @return array

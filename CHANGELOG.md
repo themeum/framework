@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.4]
+
+### Added
+
+- `Request` can now set headers, so middleware can attach them for the
+  controller: `set_header()`, `with_headers()`, `remove_header()` and
+  `has_header()`. Values are stored as strings, `null` removes a header, and
+  server parameters (and so `ip()`) are never changed.
+- `Framework\Contracts\Request` declares the four new methods. A class that
+  implements the contract directly, rather than extending `Http\Request`, must
+  add them.
+
 ## [3.3.3]
 
 ### Changed

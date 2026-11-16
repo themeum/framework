@@ -72,7 +72,7 @@ class Request implements RequestContract, Arrayable
      *
      * @since 1.0.0
      */
-    protected $headers;
+    protected $headers = [];
 
     /**
      * The server parameters the request was built from.
@@ -652,6 +652,95 @@ class Request implements RequestContract, Arrayable
     public function header(string $name, $default = null)
     {
         return $this->get_header($name, $default);
+    }
+
+    /**
+     * Set a single HTTP header on the request, replacing any existing values.
+     *
+     * Only the header bag changes. Server parameters, and therefore the client address resolved
+     * by `ip()`, are left alone so that a forwarded-address header set here cannot spoof it.
+     *
+     * @param string $name The name.
+     * @param mixed $value A scalar, an array of scalars, or null to remove the header.
+     *
+     * @return $this
+     *
+     * @throws InvalidArgumentException When the value is neither null, a scalar, nor an array of scalars.
+     *
+     * @since 3.3.4
+     */
+    public function set_header(string $name, $value)
+    {
+        if (is_null($value)) {
+            return $this->remove_header($name);
+        }
+
+        $values = is_array($value) ? array_values($value) : [$value];
+
+        foreach ($values as $item) {
+            throw_unless(
+                is_scalar($item),
+                sprintf('The value of the "%s" header must be a scalar or an array of scalars.', $name),
+                InvalidArgumentException::class
+            );
+        }
+
+        $this->headers[$this->prepare_header_name($name)] = array_map('strval', $values);
+
+        return $this;
+    }
+
+    /**
+     * Set several HTTP headers on the request, keeping headers that are not named.
+     *
+     * Each entry is applied as `set_header()` would apply it, in order, so an invalid entry
+     * throws after the entries before it have already been applied.
+     *
+     * @param array $headers The headers, keyed by name.
+     *
+     * @return $this
+     *
+     * @throws InvalidArgumentException When a value is neither null, a scalar, nor an array of scalars.
+     *
+     * @since 3.3.4
+     */
+    public function with_headers(array $headers)
+    {
+        foreach ($headers as $name => $value) {
+            $this->set_header((string) $name, $value);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Remove an HTTP header from the request.
+     *
+     * @param string $name The name.
+     *
+     * @return $this
+     *
+     * @since 3.3.4
+     */
+    public function remove_header(string $name)
+    {
+        unset($this->headers[$this->prepare_header_name($name)]);
+
+        return $this;
+    }
+
+    /**
+     * Determine whether the request carries an HTTP header.
+     *
+     * @param string $name The name.
+     *
+     * @return bool
+     *
+     * @since 3.3.4
+     */
+    public function has_header(string $name)
+    {
+        return array_key_exists($this->prepare_header_name($name), $this->headers);
     }
 
     /**

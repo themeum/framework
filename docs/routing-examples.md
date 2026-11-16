@@ -650,6 +650,40 @@ class CheckoutRequest extends FormRequest
 
 > CSRF is not built-in for v1. Verify nonces in a Form Request or custom middleware with `wp_verify_nonce()`.
 
+### Setting request headers from middleware
+
+Middleware receives the same `Request` instance the controller (or closure) gets, so headers set on it are visible to the handler:
+
+```php
+class TenantMiddleware implements Middleware
+{
+    public function handle(RequestContract $request, callable $next)
+    {
+        $request->set_header('X-Tenant', resolve_tenant_slug());
+
+        $request->with_headers([
+            'X-Trace-Id' => wp_generate_uuid4(),
+            'X-Debug'    => null, // null removes the header
+        ]);
+
+        if ($request->has_header('X-Legacy-Auth')) {
+            $request->remove_header('X-Legacy-Auth');
+        }
+
+        return $next($request);
+    }
+}
+
+// In the controller:
+$tenant = $request->header('X-Tenant');
+```
+
+- `set_header($name, $value)` replaces any existing values. Scalars are stored as strings (`42` → `'42'`), an array of scalars is stored as multiple values (`header()` returns the first, `get_headers()` returns them all), and `null` removes the header. Any other value throws `InvalidArgumentException`.
+- `with_headers(array)` applies `set_header()` per entry and leaves other headers untouched. Entries are applied in order, so an invalid entry throws after the earlier ones are already set.
+- `remove_header($name)` is a no-op when the header is absent. `has_header($name)` reports presence.
+- Names match the way `header()` reads them: `X-Tenant`, `x-tenant` and `x_tenant` are the same header.
+- Only the request's header bag changes. Server parameters are not touched, so setting `X-Forwarded-For` or `CF-Connecting-IP` does **not** change `$request->ip()`, and the underlying `WP_REST_Request` is not updated.
+
 ---
 
 
