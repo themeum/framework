@@ -23,6 +23,7 @@ use Framework\Cache\Events\KeyWritten;
 use Framework\Contracts\CacheEntryProvider;
 use Framework\Contracts\Store;
 use Framework\Supports\Traits\Macroable;
+use Framework\Wordpress\ActionHook;
 use InvalidArgumentException;
 use Throwable;
 
@@ -969,7 +970,7 @@ class Repository implements ArrayAccess
             return;
         }
 
-        add_action('shutdown', function () use ($key, $callback, $fresh, $stale) {
+        ActionHook::add('shutdown', function () use ($key, $callback, $fresh, $stale) {
             if (function_exists('fastcgi_finish_request')) {
                 fastcgi_finish_request();
             } elseif (function_exists('litespeed_finish_request')) {

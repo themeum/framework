@@ -754,7 +754,13 @@ View resolution order:
 
 1. Theme override: `{child_theme}/views/{path}.php` via `locate_template('views/...')`
 2. Application path: `{view_path}/{path}.php` (default `{base_path}/resources/views/`)
-3. Filter: `framework/view/path`
+3. Filter: `{prefix}view_path`, where `{prefix}` is the value given to `use_prefix()` (for example `kirki_view_path`). Each plugin gets its own filter, so a callback only changes view paths for its own plugin.
+
+```php
+add_filter(app()->prefix() . 'view_path', function (string $path, string $view) {
+    return $path;
+}, 10, 2);
+```
 
 ```php
 // Dot notation → resources/views/shop/product.php

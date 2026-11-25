@@ -23,7 +23,9 @@ use Framework\SiteExceptionHandler;
 use Framework\View\TemplateEngine;
 use Framework\View\View;
 use Framework\View\ViewContext;
+use Framework\Wordpress\ActionHook;
 use Framework\Wordpress\Constants\HookNames;
+use Framework\Wordpress\FilterHook;
 use Exception;
 
 use function Framework\app;
@@ -135,12 +137,12 @@ class SiteRouter
         $this->hooked = true;
 
         if ($this->routing_method === Route::ROUTING_PARSE_REQUEST) {
-            add_action('parse_request', [$this, 'intercept_parse_request']);
+            ActionHook::add('parse_request', [$this, 'intercept_parse_request']);
             return;
         }
 
         $this->register_rewrite_rules();
-        add_filter('query_vars', [$this, 'register_query_vars']);
+        FilterHook::add('query_vars', [$this, 'register_query_vars']);
     }
 
     /**
@@ -293,7 +295,7 @@ class SiteRouter
             }
 
             $wp->query_vars = $query_vars;
-            add_filter('redirect_canonical', '__return_false');
+            FilterHook::add('redirect_canonical', '__return_false');
 
             return;
         }
@@ -434,14 +436,14 @@ class SiteRouter
         $this->registered_hooks[$key] = true;
 
         if ($hook_name === HookNames::TEMPLATE_INCLUDE) {
-            add_filter(HookNames::TEMPLATE_INCLUDE, function ($template) use ($priority) {
+            FilterHook::add(HookNames::TEMPLATE_INCLUDE, function ($template) use ($priority) {
                 return $this->handle_template_include($template, $priority);
             }, $priority);
 
             return;
         }
 
-        add_action(HookNames::TEMPLATE_REDIRECT, function () use ($priority) {
+        ActionHook::add(HookNames::TEMPLATE_REDIRECT, function () use ($priority) {
             $this->handle_template_redirect($priority);
         }, $priority);
     }

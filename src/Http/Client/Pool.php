@@ -14,6 +14,8 @@ namespace Framework\Http\Client;
 
 defined('ABSPATH') || exit;
 
+use Framework\Wordpress\ActionHook;
+use Framework\Wordpress\FilterHook;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -247,14 +249,14 @@ class Pool
     protected function prepare_request($http, string $url, array $args)
     {
         $args = wp_parse_args($args, $this->default_args($url, $args));
-        $args = apply_filters('http_request_args', $args, $url);
+        $args = FilterHook::apply('http_request_args', $args, $url);
 
         if (!isset($args['_redirection'])) {
             $args['_redirection'] = $args['redirection'];
         }
 
         // WordPress returns a short-circuit as is, with no debug action or response filter.
-        $pre = apply_filters('pre_http_request', false, $args, $url);
+        $pre = FilterHook::apply('pre_http_request', false, $args, $url);
 
         if ($pre !== false) {
             return ['response' => $pre];
@@ -343,15 +345,15 @@ class Pool
     {
         $defaults = [
             'method' => 'GET',
-            'timeout' => apply_filters('http_request_timeout', 5, $url),
-            'redirection' => apply_filters('http_request_redirection_count', 5, $url),
-            'httpversion' => apply_filters('http_request_version', '1.0', $url),
-            'user-agent' => apply_filters(
+            'timeout' => FilterHook::apply('http_request_timeout', 5, $url),
+            'redirection' => FilterHook::apply('http_request_redirection_count', 5, $url),
+            'httpversion' => FilterHook::apply('http_request_version', '1.0', $url),
+            'user-agent' => FilterHook::apply(
                 'http_headers_useragent',
                 'WordPress/' . get_bloginfo('version') . '; ' . get_bloginfo('url'),
                 $url
             ),
-            'reject_unsafe_urls' => apply_filters('http_request_reject_unsafe_urls', false, $url),
+            'reject_unsafe_urls' => FilterHook::apply('http_request_reject_unsafe_urls', false, $url),
             'blocking' => true,
             'headers' => [],
             'cookies' => [],
@@ -427,7 +429,7 @@ class Pool
             $options['data_format'] = 'body';
         }
 
-        $options['verify'] = apply_filters('https_ssl_verify', $options['verify'], $url);
+        $options['verify'] = FilterHook::apply('https_ssl_verify', $options['verify'], $url);
 
         $proxy = new \WP_HTTP_Proxy();
 
@@ -465,7 +467,7 @@ class Pool
             $response['http_response'] = $http_response;
         }
 
-        do_action('http_api_debug', $response, 'response', \WpOrg\Requests\Requests::class, $args, $url);
+        ActionHook::fire('http_api_debug', $response, 'response', \WpOrg\Requests\Requests::class, $args, $url);
 
         if (is_wp_error($response)) {
             return $response;
@@ -484,7 +486,7 @@ class Pool
             ];
         }
 
-        return apply_filters('http_response', $response, $args, $url);
+        return FilterHook::apply('http_response', $response, $args, $url);
     }
 
     /**
@@ -500,7 +502,7 @@ class Pool
      */
     protected function reject($error, string $url, array $args)
     {
-        do_action('http_api_debug', $error, 'response', \WpOrg\Requests\Requests::class, $args, $url);
+        ActionHook::fire('http_api_debug', $error, 'response', \WpOrg\Requests\Requests::class, $args, $url);
 
         return $error;
     }

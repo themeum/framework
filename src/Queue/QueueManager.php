@@ -16,6 +16,7 @@ defined('ABSPATH') || exit;
 use Framework\Contracts\ShouldQueue;
 use Framework\Exceptions\QueueException;
 use Framework\Queue\Events\JobQueued;
+use Framework\Wordpress\ActionHook;
 
 use function Framework\app;
 
@@ -315,7 +316,7 @@ class QueueManager
 
         $this->spawn_scheduled = true;
 
-        add_action('shutdown', function () {
+        ActionHook::add('shutdown', function () {
             $this->spawner->spawn_if_idle();
         }, PHP_INT_MAX);
     }

@@ -272,6 +272,21 @@ return [
 ];
 ```
 
+To fire or register a hook directly, use `ActionHook` and `FilterHook`. They pass
+their arguments straight to the WordPress core functions. `fire` returns nothing,
+and `apply` returns the filtered value:
+
+```php
+use Kirki\Framework\Wordpress\ActionHook;
+use Kirki\Framework\Wordpress\FilterHook;
+
+ActionHook::add('kirki_order_placed', $callback, 10, 2);  // add_action()
+ActionHook::fire('kirki_order_placed', $order, $customer); // do_action()
+
+FilterHook::add('kirki_price', $callback);                 // add_filter()
+$price = FilterHook::apply('kirki_price', $price, $product); // apply_filters()
+```
+
 ### Routes (`routes/api.php`)
 
 ```php
