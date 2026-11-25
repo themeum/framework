@@ -14,6 +14,7 @@ namespace Framework\View;
 defined('ABSPATH') || exit;
 
 use Framework\Supports\Arr;
+use Framework\Wordpress\ActionHook;
 
 use function Framework\app;
 
@@ -245,7 +246,7 @@ class ViewContext
 
         $this->shutdown_registered = true;
 
-        add_action('shutdown', function () {
+        ActionHook::add('shutdown', function () {
             $this->clear();
         }, 999);
     }

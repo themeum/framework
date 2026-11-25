@@ -128,7 +128,7 @@ class HookServiceProvider extends ServiceProvider
         $actions = $this->app->tagged('hook.actions');
 
         foreach ($actions as $action) {
-            add_action(
+            ActionHook::add(
                 $action->get_name(),
                 [$action, 'handle'],
                 $action->get_priority(),
@@ -139,7 +139,7 @@ class HookServiceProvider extends ServiceProvider
         $filters = $this->app->tagged('hook.filters');
 
         foreach ($filters as $filter) {
-            add_filter(
+            FilterHook::add(
                 $filter->get_name(),
                 [$filter, 'handle'],
                 $filter->get_priority(),

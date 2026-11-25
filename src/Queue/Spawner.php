@@ -19,6 +19,7 @@ defined('ABSPATH') || exit;
 use Framework\Cache\CacheManager;
 use Framework\Cache\Concerns\InteractsWithTime;
 use Framework\Supports\Facades\Http;
+use Framework\Wordpress\FilterHook;
 use Throwable;
 
 use function Framework\app;
@@ -119,7 +120,7 @@ class Spawner
                 ->timeout(0.01)
                 ->with_options([
                     'blocking' => false,
-                    'sslverify' => apply_filters('https_local_ssl_verify', false),
+                    'sslverify' => FilterHook::apply('https_local_ssl_verify', false),
                 ])
                 ->post(admin_url('admin-ajax.php'), [
                     'action' => static::action(),

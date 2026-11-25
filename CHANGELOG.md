@@ -5,6 +5,31 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.5]
+
+### Added
+
+- `Framework\Wordpress\ActionHook` and `Framework\Wordpress\FilterHook` fire and
+  register WordPress hooks with clearer names: `ActionHook::fire()` /
+  `ActionHook::add()` and `FilterHook::apply()` / `FilterHook::add()`. Each one
+  passes its arguments straight to `do_action()`, `add_action()`,
+  `apply_filters()` or `add_filter()` and returns what that function returns.
+
+### Changed
+
+- The framework now fires and registers its own hooks through `ActionHook` and
+  `FilterHook`. The hooks and their arguments are the same. The callback must be
+  callable when it is registered, and the priority and accepted-args count must
+  be integers. This matters for a `HookSubscriber` whose `get_priority()` or
+  `get_args_count()` returns something that is not an integer (for example
+  `null`): `HookServiceProvider` now throws a `TypeError` for it.
+- **Breaking:** the view path filter is renamed from `framework/view/path` to
+  `{prefix}view_path`, built from the app's `use_prefix()` value (for example
+  `kirki_view_path`). The old name was the same for every plugin that bundles
+  the framework, so one plugin's callback also changed another plugin's view
+  paths. The old name is no longer applied. Move callbacks to
+  `app()->prefix() . 'view_path'`.
+
 ## [3.3.4]
 
 ### Added

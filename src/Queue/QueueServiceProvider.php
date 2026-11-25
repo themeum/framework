@@ -22,6 +22,8 @@ use Framework\Console\Commands\QueueWorkCommand;
 use Framework\Http\Superglobals;
 use Framework\ServiceProvider;
 use Framework\Supports\Facades\Command;
+use Framework\Wordpress\ActionHook;
+use Framework\Wordpress\FilterHook;
 use Throwable;
 
 class QueueServiceProvider extends ServiceProvider
@@ -72,7 +74,7 @@ class QueueServiceProvider extends ServiceProvider
         $schedule = $this->app->prefix() . 'queue_every_minute';
         $hook = $this->app->prefix() . 'queue_sweep';
 
-        add_filter('cron_schedules', function ($schedules) use ($schedule) {
+        FilterHook::add('cron_schedules', function ($schedules) use ($schedule) {
             $schedules[$schedule] = [
                 'interval' => MINUTE_IN_SECONDS,
                 'display' => 'Every minute (queue sweep)',
@@ -81,7 +83,7 @@ class QueueServiceProvider extends ServiceProvider
             return $schedules;
         });
 
-        add_action($hook, function () {
+        ActionHook::add($hook, function () {
             try {
                 $this->app->make(Sweeper::class)->sweep();
             } catch (Throwable $exception) {
@@ -112,8 +114,8 @@ class QueueServiceProvider extends ServiceProvider
             wp_die('', '', ['response' => $accepted ? 200 : 403]);
         };
 
-        add_action('wp_ajax_nopriv_' . Spawner::action(), $callback);
-        add_action('wp_ajax_' . Spawner::action(), $callback);
+        ActionHook::add('wp_ajax_nopriv_' . Spawner::action(), $callback);
+        ActionHook::add('wp_ajax_' . Spawner::action(), $callback);
     }
 
     /**

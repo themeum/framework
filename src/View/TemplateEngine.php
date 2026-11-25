@@ -11,6 +11,7 @@ namespace Framework\View;
 
 defined('ABSPATH') || exit;
 
+use Framework\Wordpress\FilterHook;
 use RuntimeException;
 
 use function Framework\app;
@@ -172,7 +173,7 @@ class TemplateEngine
             $theme_path = locate_template('views/' . $relative);
 
             if ($theme_path !== '') {
-                return apply_filters('framework/view/path', $theme_path, $view);
+                return FilterHook::apply(app()->prefix() . 'view_path', $theme_path, $view);
             }
         }
 
@@ -182,14 +183,14 @@ class TemplateEngine
         $base_real = realpath($base_path);
 
         if ($resolved === false || $base_real === false || strpos($resolved, $base_real) !== 0) {
-            return apply_filters('framework/view/path', '', $view);
+            return FilterHook::apply(app()->prefix() . 'view_path', '', $view);
         }
 
         if (!is_file($resolved) || !is_readable($resolved)) {
-            return apply_filters('framework/view/path', '', $view);
+            return FilterHook::apply(app()->prefix() . 'view_path', '', $view);
         }
 
-        return apply_filters('framework/view/path', $resolved, $view);
+        return FilterHook::apply(app()->prefix() . 'view_path', $resolved, $view);
     }
 
     /**

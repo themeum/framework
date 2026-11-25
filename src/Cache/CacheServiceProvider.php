@@ -14,6 +14,7 @@ defined('ABSPATH') || exit;
 
 use Framework\Cache\Locks\DatabaseLock;
 use Framework\ServiceProvider;
+use Framework\Wordpress\ActionHook;
 use Throwable;
 
 class CacheServiceProvider extends ServiceProvider
@@ -63,7 +64,7 @@ class CacheServiceProvider extends ServiceProvider
 
         $hook = $this->app->prefix() . 'cache_gc';
 
-        add_action($hook, function () {
+        ActionHook::add($hook, function () {
             try {
                 $manager = $this->app->make(CacheManager::class);
                 $manager->collect_garbage();

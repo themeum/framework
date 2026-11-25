@@ -42,6 +42,34 @@ class TemplateEngineTest extends TestCase
         $this->remove_directory($views);
     }
 
+    public function test_resolve_path_applies_the_prefixed_view_path_filter_only(): void
+    {
+        $views = sys_get_temp_dir() . '/framework-views-' . uniqid();
+        mkdir($views . '/shop', 0777, true);
+        file_put_contents($views . '/shop/product.php', '');
+
+        $app = $this->bootstrap_application();
+        $app->use_prefix('kirki_');
+        $app->use_view_path($views);
+        $app->instance(TemplateEngine::class, new TemplateEngine());
+
+        add_filter('framework/view/path', function () {
+            return '/shared/hook/must/not/run.php';
+        });
+        add_filter('growfund_view_path', function () {
+            return '/other/plugin/must/not/run.php';
+        });
+        add_filter('kirki_view_path', function ($path, $view) {
+            return $path . '|' . $view;
+        }, 10, 2);
+
+        $path = $app->make(TemplateEngine::class)->resolve_path('shop.product');
+
+        $this->assertSame(realpath($views . '/shop/product.php') . '|shop.product', $path);
+
+        $this->remove_directory($views);
+    }
+
     public function test_render_without_layout_returns_template_output(): void
     {
         $views = sys_get_temp_dir() . '/framework-views-' . uniqid();

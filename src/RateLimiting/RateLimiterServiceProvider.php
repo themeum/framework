@@ -15,6 +15,7 @@ defined('ABSPATH') || exit;
 use Framework\Middlewares\ThrottleRequests;
 use Framework\Route;
 use Framework\ServiceProvider;
+use Framework\Wordpress\FilterHook;
 
 class RateLimiterServiceProvider extends ServiceProvider
 {
@@ -63,7 +64,7 @@ class RateLimiterServiceProvider extends ServiceProvider
             return;
         }
 
-        add_filter('rest_post_dispatch', function ($response) {
+        FilterHook::add('rest_post_dispatch', function ($response) {
             $headers = ThrottleRequests::recorded_headers();
 
             if (empty($headers) || !is_object($response) || !method_exists($response, 'header')) {
