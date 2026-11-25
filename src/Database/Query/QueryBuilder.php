@@ -2404,7 +2404,9 @@ class QueryBuilder
      */
     public function offset($offset)
     {
-        $this->offset = $offset;
+        if ($offset >= 0) {
+            $this->offset = $offset;
+        }
 
         return $this;
     }
